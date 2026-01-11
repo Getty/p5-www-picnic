@@ -1,0 +1,8 @@
+{{$NEXT}}
+
+ - Repository migration to p5-www-picnic
+ - Update documentation and metadata
+
+0.001     2020-12-13
+
+ - First setup with basic functionality

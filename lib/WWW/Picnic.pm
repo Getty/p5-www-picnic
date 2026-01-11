@@ -191,17 +191,13 @@ aware that the results will change.
 
 =head1 SUPPORT
 
-IRC
-
-  Join irc.perl.org and msg Getty
-
 Repository
 
-  https://github.com/Getty/perl-picnic
+  https://github.com/Getty/p5-www-picnic
   Pull request and additional contributors are welcome
 
 Issue Tracker
 
-  https://github.com/Getty/perl-picnic/issues
+  https://github.com/Getty/p5-www-picnic/issues
 
 =cut
