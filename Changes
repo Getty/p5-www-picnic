@@ -1,4 +1,4 @@
-{{$NEXT}}
+0.100     2026-01-11 06:17:48Z
 
  - Added Result classes for all API responses:
    - WWW::Picnic::Result base class with raw data access
