@@ -1,6 +1,6 @@
 package WWW::Picnic::Result::DeliverySlots;
 # ABSTRACT: Collection of Picnic delivery slots
-
+our $VERSION = '0.101';
 use Moo;
 
 extends 'WWW::Picnic::Result';

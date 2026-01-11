@@ -1,6 +1,6 @@
 package WWW::Picnic::Result::SearchResult;
 # ABSTRACT: Picnic product search result item
-
+our $VERSION = '0.101';
 use Moo;
 
 extends 'WWW::Picnic::Result';

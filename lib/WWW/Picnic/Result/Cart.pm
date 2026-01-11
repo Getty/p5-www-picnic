@@ -1,6 +1,6 @@
 package WWW::Picnic::Result::Cart;
 # ABSTRACT: Picnic shopping cart / order
-
+our $VERSION = '0.101';
 use Moo;
 
 extends 'WWW::Picnic::Result';

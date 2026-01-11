@@ -1,6 +1,6 @@
 package WWW::Picnic::Result::Article;
 # ABSTRACT: Detailed Picnic product/article information
-
+our $VERSION = '0.101';
 use Moo;
 
 extends 'WWW::Picnic::Result';

@@ -1,6 +1,6 @@
 package WWW::Picnic::Result::Login;
 # ABSTRACT: Picnic login result with 2FA status
-
+our $VERSION = '0.101';
 use Moo;
 
 extends 'WWW::Picnic::Result';

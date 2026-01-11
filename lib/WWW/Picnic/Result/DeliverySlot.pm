@@ -1,6 +1,6 @@
 package WWW::Picnic::Result::DeliverySlot;
 # ABSTRACT: Picnic delivery time slot
-
+our $VERSION = '0.101';
 use Moo;
 
 extends 'WWW::Picnic::Result';
