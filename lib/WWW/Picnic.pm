@@ -9,20 +9,87 @@ use HTTP::Request;
 use LWP::UserAgent;
 use Digest::MD5 qw( md5_hex );
 
+use WWW::Picnic::Result::Login;
+use WWW::Picnic::Result::User;
+use WWW::Picnic::Result::Cart;
+use WWW::Picnic::Result::DeliverySlots;
+use WWW::Picnic::Result::Search;
+use WWW::Picnic::Result::Article;
+
+=head1 SYNOPSIS
+
+    use WWW::Picnic;
+
+    my $picnic = WWW::Picnic->new(
+        user => 'user@universe.org',
+        pass => 'alohahey',
+        country => 'de',
+    );
+
+    # Explicit login with 2FA support
+    my $login = $picnic->login;
+    if ($login->requires_2fa) {
+        $picnic->generate_2fa_code;
+        print "Enter SMS code: ";
+        my $code = <STDIN>;
+        chomp $code;
+        $picnic->verify_2fa_code($code);
+    }
+
+    # Search for products
+    my $results = $picnic->search('apple');
+
+    # Get your cart
+    my $cart = $picnic->get_cart;
+
+    # Get available delivery slots
+    my $slots = $picnic->get_delivery_slots;
+
+=head1 DESCRIPTION
+
+B<WORK IN PROGRESS>
+
+This module provides a Perl interface to the Picnic Supermarket API. It handles
+authentication and provides methods to search for products, manage your cart,
+and check delivery slots.
+
+B<Note:> The module will eventually get classes for the results. If you use this
+now, please be aware that the return values will change.
+
+=cut
+
 has user => (
   is => 'ro',
   required => 1,
 );
+
+=attr user
+
+Login email address for your Picnic account. Required.
+
+=cut
 
 has pass => (
   is => 'ro',
   required => 1,
 );
 
-has client_id => ( # ???
+=attr pass
+
+Password for your Picnic account. Required.
+
+=cut
+
+has client_id => (
   is => 'ro',
-  default => sub { 1 },
+  default => sub { 30100 },
 );
+
+=attr client_id
+
+Client identifier for API requests. Defaults to C<30100> (Android app).
+
+=cut
 
 has api_version => (
   isa => sub { $_[0] >= 15 },
@@ -30,10 +97,23 @@ has api_version => (
   default => sub { 15 },
 );
 
+=attr api_version
+
+Picnic API version number. Must be 15 or higher. Defaults to C<15>.
+
+=cut
+
 has country => (
   is => 'ro',
   default => sub { 'de' },
 );
+
+=attr country
+
+Two-letter country code for your Picnic account. Supported values are C<de> (Germany)
+and C<nl> (Netherlands). Defaults to C<de>.
+
+=cut
 
 sub api_endpoint {
   my ( $self ) = @_;
@@ -51,16 +131,58 @@ has http_agent => (
   },
 );
 
+=attr http_agent
+
+L<LWP::UserAgent> instance used for making HTTP requests to the Picnic API.
+Automatically created with the User-Agent string from L</http_agent_name>.
+
+=cut
+
 has http_agent_name => (
   is => 'ro',
   lazy => 1,
-  default => sub { 'okhttp/3.9.0' },
+  default => sub { 'okhttp/3.12.2' },
 );
+
+=attr http_agent_name
+
+User-Agent string sent with HTTP requests. Defaults to C<okhttp/3.12.2> to mimic
+the Picnic mobile app.
+
+=cut
+
+has picnic_agent => (
+  is => 'ro',
+  lazy => 1,
+  default => sub { '30100;1.15.232-15154' },
+);
+
+=attr picnic_agent
+
+Picnic agent identifier string. Defaults to Android app version.
+
+=cut
+
+has picnic_did => (
+  is => 'ro',
+  lazy => 1,
+  default => sub {
+    # Generate a random device ID (16 hex chars)
+    my @chars = ('0'..'9', 'A'..'F');
+    return join '', map { $chars[rand @chars] } 1..16;
+  },
+);
+
+=attr picnic_did
+
+Picnic device identifier. Auto-generated random hex string if not provided.
+
+=cut
 
 has json => (
   is => 'ro',
   lazy => 1,
-  default => sub { return JSON::MaybeXS->new },
+  default => sub { return JSON::MaybeXS->new->utf8 },
 );
 
 has _auth_cache => (
@@ -68,33 +190,132 @@ has _auth_cache => (
   default => sub {{}},
 );
 
-sub picnic_auth {
+sub login {
   my ( $self ) = @_;
-  unless (defined $self->_auth_cache->{auth}) {
-    my $url = URI->new(join('/',$self->api_endpoint,'user','login'));
-    my $request = HTTP::Request->new( POST => $url );
-    $request->header('Accept' => 'application/json');
-    $request->header('Content-Type' => 'application/json; charset=UTF-8');
-    $request->content($self->json->encode({
-      key => $self->user,
-      secret => md5_hex($self->pass),
-      client_id => $self->client_id,
-    }));
-    my $response = $self->http_agent->request($request);
-    if ($response->is_success) {
-      my $auth = $response->header('X-Picnic-Auth');
-      croak __PACKAGE__.": login success, but no auth token!" unless $auth;
-      my $data = $self->json->decode($response->content);
-      croak __PACKAGE__.": login success, but user id!" unless $data and $data->{user_id};
+  my $url = URI->new(join('/',$self->api_endpoint,'user','login'));
+  my $request = HTTP::Request->new( POST => $url );
+  $request->header('Accept' => 'application/json');
+  $request->header('Content-Type' => 'application/json; charset=UTF-8');
+  $request->content($self->json->encode({
+    key => $self->user,
+    secret => md5_hex($self->pass),
+    client_id => $self->client_id,
+  }));
+  my $response = $self->http_agent->request($request);
+  if ($response->is_success) {
+    my $auth = $response->header('X-Picnic-Auth');
+    my $data = $self->json->decode($response->content);
+    $data->{auth_key} = $auth;
+    if ($auth && $data->{user_id} && !$data->{second_factor_authentication_required}) {
       $self->_auth_cache->{auth} = $auth;
       $self->_auth_cache->{time} = time;
       $self->_auth_cache->{user_id} = $data->{user_id};
-    } else {
-      croak __PACKAGE__.": login failed! ".$response->status_line;
+    }
+    return WWW::Picnic::Result::Login->new($data);
+  } else {
+    croak __PACKAGE__.": login failed! ".$response->status_line;
+  }
+}
+
+=method login
+
+    my $login = $picnic->login;
+    if ($login->requires_2fa) {
+        # Handle 2FA
+    }
+
+Authenticates with the Picnic API. Returns a L<WWW::Picnic::Result::Login>
+object that indicates whether two-factor authentication is required.
+
+If 2FA is not required, the auth token is cached automatically.
+
+=cut
+
+sub generate_2fa_code {
+  my ( $self, $channel ) = @_;
+  $channel //= 'SMS';
+  my $url = URI->new(join('/',$self->api_endpoint,'user','2fa','generate'));
+  my $request = HTTP::Request->new( POST => $url );
+  $request->header('Accept' => 'application/json');
+  $request->header('Content-Type' => 'application/json; charset=UTF-8');
+  $request->content($self->json->encode({ channel => $channel }));
+  my $response = $self->http_agent->request($request);
+  unless ($response->is_success) {
+    croak __PACKAGE__.": 2FA code generation failed! ".$response->status_line;
+  }
+  return 1;
+}
+
+=method generate_2fa_code
+
+    $picnic->generate_2fa_code;
+    $picnic->generate_2fa_code('SMS');  # explicit channel
+
+Request a 2FA code to be sent via SMS (default) or another channel.
+Call this after L</login> returns a result requiring 2FA.
+
+=cut
+
+sub verify_2fa_code {
+  my ( $self, $code ) = @_;
+  croak __PACKAGE__.": 2FA code required" unless defined $code;
+  my $url = URI->new(join('/',$self->api_endpoint,'user','2fa','verify'));
+  my $request = HTTP::Request->new( POST => $url );
+  $request->header('Accept' => 'application/json');
+  $request->header('Content-Type' => 'application/json; charset=UTF-8');
+  $request->content($self->json->encode({ otp => $code }));
+  my $response = $self->http_agent->request($request);
+  if ($response->is_success) {
+    my $auth = $response->header('X-Picnic-Auth');
+    croak __PACKAGE__.": 2FA verify success, but no auth token!" unless $auth;
+    my $data = $self->json->decode($response->content);
+    $self->_auth_cache->{auth} = $auth;
+    $self->_auth_cache->{time} = time;
+    $self->_auth_cache->{user_id} = $data->{user_id} if $data->{user_id};
+    return 1;
+  } else {
+    croak __PACKAGE__.": 2FA verification failed! ".$response->status_line;
+  }
+}
+
+=method verify_2fa_code
+
+    $picnic->verify_2fa_code('123456');
+
+Verify the 2FA code received via SMS. On success, the auth token is
+cached and you can proceed with API calls.
+
+=cut
+
+sub picnic_auth {
+  my ( $self ) = @_;
+  unless (defined $self->_auth_cache->{auth}) {
+    my $login = $self->login;
+    if ($login->requires_2fa) {
+      croak __PACKAGE__.": 2FA required! Call login() and handle 2FA flow manually.";
+    }
+    unless ($self->_auth_cache->{auth}) {
+      croak __PACKAGE__.": login failed to obtain auth token!";
     }
   }
   return $self->_auth_cache->{auth};
 }
+
+=method picnic_auth
+
+    my $token = $picnic->picnic_auth;
+
+Authenticates with the Picnic API using the provided L</user> and L</pass>.
+Returns the authentication token (C<X-Picnic-Auth> header value). The token
+is cached after the first successful authentication.
+
+B<Note:> If 2FA is required, this method will croak. Use L</login> instead
+and handle the 2FA flow manually.
+
+This method is called automatically by L</request>, so you typically don't
+need to call it directly.
+
+=cut
 
 sub request {
   my ( $self, @original_args ) = @_;
@@ -107,6 +328,8 @@ sub request {
   my $request = HTTP::Request->new( $method => $url );
   $request->header('Accept' => 'application/json');
   $request->header('X-Picnic-Auth' => $self->picnic_auth );
+  $request->header('X-Picnic-Agent' => $self->picnic_agent );
+  $request->header('X-Picnic-Did' => $self->picnic_did );
   if (defined $data) {
     $request->header('Content-Type' => 'application/json');
     $request->content($self->json->encode($data));
@@ -118,86 +341,203 @@ sub request {
   return $self->json->decode($response->content);
 }
 
+=method request
+
+    my $result = $picnic->request($method, $path, $data, %params);
+
+Makes an authenticated HTTP request to the Picnic API. Returns the decoded JSON response.
+
+Parameters:
+
+=over 4
+
+=item * C<$method> - HTTP method (GET, POST, PUT, etc.)
+
+=item * C<$path> - API endpoint path (relative to api_endpoint)
+
+=item * C<$data> - Optional hashref/arrayref to send as JSON body
+
+=item * C<%params> - Optional query parameters
+
+=back
+
+This is a low-level method used internally by other methods. You typically won't
+need to call it directly unless accessing undocumented API endpoints.
+
+=cut
+
 sub get_user {
   my ( $self ) = @_;
-  return $self->request( GET => 'user' );
+  return WWW::Picnic::Result::User->new( $self->request( GET => 'user' ) );
 }
-
-sub get_cart {
-  my ( $self ) = @_;
-  return $self->request( GET => 'cart' );
-}
-
-sub clear_cart {
-  my ( $self ) = @_;
-  return $self->request( POST => 'cart/clear' );
-}
-
-sub get_delivery_slots {
-  my ( $self ) = @_;
-  return $self->request( GET => 'cart/delivery_slots' );
-}
-
-sub search {
-  my ( $self, $term ) = @_;
-  return $self->request( GET => 'search', undef, search_term => $term );
-}
-
-1;
-
-=encoding utf8
-
-=head1 SYNOPSIS
-
-  use WWW::Picnic;
-
-  my $picnic = WWW::Picnic->new(
-    user => 'user@universe.org',
-    pass => 'alohahey',
-    country => 'DE',
-  );
-
-
-=head1 DESCRIPTION
-
-B<WORK IN PROGRESS>
-
-=attr user
-
-Your login email at Picnic
-
-=attr user
-
-Your password at Picnic
-
-=attr country
-
-2-letter country code of your account
 
 =method get_user
 
+    my $user = $picnic->get_user;
+    say $user->firstname, " ", $user->lastname;
+
+Returns a L<WWW::Picnic::Result::User> object with your account details.
+
+=cut
+
+sub get_cart {
+  my ( $self ) = @_;
+  return WWW::Picnic::Result::Cart->new( $self->request( GET => 'cart' ) );
+}
+
 =method get_cart
+
+    my $cart = $picnic->get_cart;
+    say "Items: ", $cart->total_count;
+    say "Total: ", $cart->total_price / 100, " EUR";
+
+Returns a L<WWW::Picnic::Result::Cart> object with your shopping cart contents.
+
+=cut
+
+sub clear_cart {
+  my ( $self ) = @_;
+  return WWW::Picnic::Result::Cart->new( $self->request( POST => 'cart/clear' ) );
+}
 
 =method clear_cart
 
+    my $cart = $picnic->clear_cart;
+
+Removes all items from your shopping cart. Returns the updated
+L<WWW::Picnic::Result::Cart> object.
+
+=cut
+
+sub get_delivery_slots {
+  my ( $self ) = @_;
+  return WWW::Picnic::Result::DeliverySlots->new( $self->request( GET => 'cart/delivery_slots' ) );
+}
+
 =method get_delivery_slots
+
+    my $slots = $picnic->get_delivery_slots;
+    for my $slot ($slots->available_slots) {
+        say $slot->window_start, " - ", $slot->window_end;
+    }
+
+Returns a L<WWW::Picnic::Result::DeliverySlots> object with available
+delivery time slots for your current cart.
+
+=cut
+
+sub search {
+  my ( $self, $term ) = @_;
+  return WWW::Picnic::Result::Search->new( $self->request( GET => 'pages/search-page-results', undef, search_term => $term ) );
+}
 
 =method search
 
-=head1 TODO
+    my $results = $picnic->search('haribo');
+    for my $item ($results->all_items) {
+        say $item->name, " - ", $item->display_price;
+    }
 
-The module gets classes for the results, so if you use this now, please be
-aware that the results will change.
-
-=head1 SUPPORT
-
-Repository
-
-  https://github.com/Getty/p5-www-picnic
-  Pull request and additional contributors are welcome
-
-Issue Tracker
-
-  https://github.com/Getty/p5-www-picnic/issues
+Search for products by name or term. Returns a L<WWW::Picnic::Result::Search>
+object containing the results.
 
 =cut
+
+sub get_article {
+  my ( $self, $product_id ) = @_;
+  return WWW::Picnic::Result::Article->new( $self->request( GET => "articles/$product_id" ) );
+}
+
+=method get_article
+
+    my $article = $picnic->get_article($product_id);
+    say $article->name;
+    say $article->description;
+
+Get detailed information about a specific product. Returns a
+L<WWW::Picnic::Result::Article> object.
+
+=cut
+
+sub add_to_cart {
+  my ( $self, $product_id, $count ) = @_;
+  $count //= 1;
+  return WWW::Picnic::Result::Cart->new(
+    $self->request( POST => 'cart/add_product', { product_id => $product_id, count => $count } )
+  );
+}
+
+=method add_to_cart
+
+    my $cart = $picnic->add_to_cart($product_id);
+    my $cart = $picnic->add_to_cart($product_id, 3);  # add 3 items
+
+Add a product to your shopping cart. Optionally specify quantity (default: 1).
+Returns the updated L<WWW::Picnic::Result::Cart> object.
+
+=cut
+
+sub remove_from_cart {
+  my ( $self, $product_id, $count ) = @_;
+  $count //= 1;
+  return WWW::Picnic::Result::Cart->new(
+    $self->request( POST => 'cart/remove_product', { product_id => $product_id, count => $count } )
+  );
+}
+
+=method remove_from_cart
+
+    my $cart = $picnic->remove_from_cart($product_id);
+    my $cart = $picnic->remove_from_cart($product_id, 2);  # remove 2 items
+
+Remove a product from your shopping cart. Optionally specify quantity (default: 1).
+Returns the updated L<WWW::Picnic::Result::Cart> object.
+
+=cut
+
+sub set_delivery_slot {
+  my ( $self, $slot_id ) = @_;
+  return WWW::Picnic::Result::Cart->new(
+    $self->request( POST => 'cart/set_delivery_slot', { slot_id => $slot_id } )
+  );
+}
+
+=method set_delivery_slot
+
+    my $cart = $picnic->set_delivery_slot($slot_id);
+
+Select a delivery slot for your order. Returns the updated
+L<WWW::Picnic::Result::Cart> object.
+
+=cut
+
+sub get_categories {
+  my ( $self, $depth ) = @_;
+  $depth //= 0;
+  return $self->request( GET => 'my_store', undef, depth => $depth );
+}
+
+=method get_categories
+
+    my $categories = $picnic->get_categories;
+    my $categories = $picnic->get_categories(2);  # with depth
+
+Get product categories. Optionally specify depth for nested categories.
+Returns raw API response (categories structure varies).
+
+=cut
+
+sub get_suggestions {
+  my ( $self, $term ) = @_;
+  return $self->request( GET => 'suggest', undef, search_term => $term );
+}
+
+=method get_suggestions
+
+    my $suggestions = $picnic->get_suggestions('app');
+
+Get search suggestions for a partial search term. Returns raw API response.
+
+=cut
+
+1;

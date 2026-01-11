@@ -1,0 +1,43 @@
+#!/usr/bin/env perl
+# PODNAME: picnic-de
+# ABSTRACT: German Picnic CLI (wrapper for picnic with PICNIC_LANG=de and PICNIC_COUNTRY=de)
+
+use strict;
+use warnings;
+use FindBin;
+
+$ENV{PICNIC_LANG}    //= 'de';
+$ENV{PICNIC_COUNTRY} //= 'de';
+
+exec("$FindBin::Bin/picnic", @ARGV) or die "Cannot exec picnic: $!\n";
+
+__END__
+
+=head1 SYNOPSIS
+
+    picnic-de [options] <command> [arguments]
+
+    picnic-de slots           # Verfügbare Lieferslots
+    picnic-de search haribo   # Produktsuche
+    picnic-de add s1234567    # Produkt hinzufügen
+
+=head1 DESCRIPTION
+
+This is a convenience wrapper for the C<picnic> command that sets
+C<PICNIC_LANG=de> and C<PICNIC_COUNTRY=de> by default.
+
+All options and commands are passed through to C<picnic>.
+See L<picnic> for full documentation.
+
+=head1 ENVIRONMENT VARIABLES
+
+    PICNIC_USER     Your Picnic account email
+    PICNIC_PASS     Your Picnic account password
+    PICNIC_COUNTRY  Country code (default: de)
+    PICNIC_LANG     Language (default: de)
+
+=head1 SEE ALSO
+
+L<picnic>, L<picnic-nl>, L<WWW::Picnic>
+
+=cut

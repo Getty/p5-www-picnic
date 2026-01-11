@@ -1,0 +1,43 @@
+#!/usr/bin/env perl
+# PODNAME: picnic-nl
+# ABSTRACT: Dutch Picnic CLI (wrapper for picnic with PICNIC_LANG=nl and PICNIC_COUNTRY=nl)
+
+use strict;
+use warnings;
+use FindBin;
+
+$ENV{PICNIC_LANG}    //= 'nl';
+$ENV{PICNIC_COUNTRY} //= 'nl';
+
+exec("$FindBin::Bin/picnic", @ARGV) or die "Cannot exec picnic: $!\n";
+
+__END__
+
+=head1 SYNOPSIS
+
+    picnic-nl [options] <command> [arguments]
+
+    picnic-nl slots           # Beschikbare bezorgmomenten
+    picnic-nl search appel    # Zoeken naar producten
+    picnic-nl add s1234567    # Product toevoegen
+
+=head1 DESCRIPTION
+
+This is a convenience wrapper for the C<picnic> command that sets
+C<PICNIC_LANG=nl> and C<PICNIC_COUNTRY=nl> by default.
+
+All options and commands are passed through to C<picnic>.
+See L<picnic> for full documentation.
+
+=head1 ENVIRONMENT VARIABLES
+
+    PICNIC_USER     Your Picnic account email
+    PICNIC_PASS     Your Picnic account password
+    PICNIC_COUNTRY  Country code (default: nl)
+    PICNIC_LANG     Language (default: nl)
+
+=head1 SEE ALSO
+
+L<picnic>, L<picnic-de>, L<WWW::Picnic>
+
+=cut
