@@ -182,7 +182,7 @@ Picnic device identifier. Auto-generated random hex string if not provided.
 has json => (
   is => 'ro',
   lazy => 1,
-  default => sub { return JSON::MaybeXS->new->utf8 },
+  default => sub { return JSON::MaybeXS->new( utf8 => 1, convert_blessed => 1 ) },
 );
 
 has _auth_cache => (
