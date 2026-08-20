@@ -6,7 +6,7 @@ allowed-tools: Read, Edit, Grep, Glob
 briefing:
   skills:
     - www-picnic-perl
-    - perl-release-author-getty
+    - getty-perl-release-author-getty
 ---
 
 You are the www-picnic-doc-writer for **WWW::Picnic**.

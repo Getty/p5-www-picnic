@@ -1,6 +1,6 @@
 ---
 name: www-picnic-perl
-description: WWW::Picnic Perl client architecture — the Picnic Supermarket API surface, the WWW::Picnic::Result object model, the MockUA test pattern, and the CLI conventions in bin/picnic*. Load on any edit in lib/WWW/Picnic/* or bin/picnic*.
+description: Load on any edit in lib/WWW/Picnic/* or bin/picnic* — the API surface, the Result object model, the MockUA test pattern, where the version lives.
 ---
 
 # WWW::Picnic — Architecture & Implementation Patterns
@@ -108,7 +108,7 @@ Run command: `prove -lr t` (recursive — the suite is flat today, keep `-r` so 
 ## Conventions — silent, non-negotiable
 
 - Moo everywhere. No Moose, no Moose deps.
-- `use Module qw(...)` at the top of every `.pm`; no `require` as a "lazy optimisation" (`perl-core`).
-- Inline `=attr` / `=method` POD, one per attribute/method; `PodWeaver` generates the boilerplate (`perl-release-author-getty`).
+- `use Module qw(...)` at the top of every `.pm`; no `require` as a "lazy optimisation" (`getty-perl-core`).
+- Inline `=attr` / `=method` POD, one per attribute/method; `PodWeaver` generates the boilerplate (`getty-perl-release-author-getty`).
 - `Changes` bullet under `{{$NEXT}}` in the SAME change as any user-facing change — new method, new result class, fixed bug, CLI command. Two-space indent, `  - ` bullets, present tense.
-- `cpanfile` pins Getty-authored deps to their **latest released CPAN version**, never the repo `$VERSION` (`perl-core`).
+- `cpanfile` pins Getty-authored deps to their **latest released CPAN version**, never the repo `$VERSION` (`getty-perl-core`).

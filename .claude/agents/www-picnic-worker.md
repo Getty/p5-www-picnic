@@ -6,10 +6,10 @@ allowed-tools: Read, Edit, Write, Bash, Glob, Grep
 briefing:
   skills:
     - www-picnic-perl
-    - perl-core
-    - perl-moo
+    - getty-perl-core
+    - getty-perl-moo
     - perl-release-dist-ini
-    - perl-release-author-getty
+    - getty-perl-release-author-getty
 ---
 
 You are the www-picnic-worker for **WWW::Picnic**, the Perl client for the Picnic Supermarket API (login + 2FA, search, cart, delivery slots, articles).

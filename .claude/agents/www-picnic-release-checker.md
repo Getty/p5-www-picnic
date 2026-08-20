@@ -6,9 +6,9 @@ allowed-tools: Read, Bash, Glob, Grep
 briefing:
   skills:
     - www-picnic-perl
-    - perl-core
+    - getty-perl-core
     - perl-release-dist-ini
-    - perl-release-author-getty
+    - getty-perl-release-author-getty
 ---
 
 You are the www-picnic-release-checker for **WWW::Picnic**. Conventions from the skills above are non-negotiable — apply silently.

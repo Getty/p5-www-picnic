@@ -6,7 +6,7 @@ allowed-tools: Read, Edit, Write, Bash, Glob, Grep
 briefing:
   skills:
     - www-picnic-perl
-    - perl-core
+    - getty-perl-core
 ---
 
 You are the www-picnic-test-writer.
