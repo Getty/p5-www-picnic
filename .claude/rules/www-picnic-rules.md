@@ -81,6 +81,6 @@ explicitly says to handle a specific ticket.
 ## Perl specifics — reference, don't restate
 
 Module loading, Moo patterns, dependency pinning, `[@Author::GETTY]` release metadata,
-POD directives, and house style live in skills `perl-core`, `perl-moo`,
-`perl-release-dist-ini`, `perl-release-author-getty`, and `www-picnic-perl`
+POD directives, and house style live in skills `getty-perl-core`, `getty-perl-moo`,
+`perl-release-dist-ini`, `getty-perl-release-author-getty`, and `www-picnic-perl`
 (force-loaded for `www-picnic-*` agents). Do not duplicate that content here.
