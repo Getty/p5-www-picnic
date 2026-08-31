@@ -1,5 +1,5 @@
 ---
-name: www-picnic-perl
+name: www-picnic-core
 description: Load on any edit in lib/WWW/Picnic/* or bin/picnic* — the API surface, the Result object model, the MockUA test pattern, where the version lives.
 ---
 

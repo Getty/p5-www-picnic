@@ -5,7 +5,7 @@ model: sonnet
 allowed-tools: Read, Edit, Grep, Glob
 briefing:
   skills:
-    - www-picnic-perl
+    - www-picnic-core
     - getty-perl-release-author-getty
 ---
 

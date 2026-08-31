@@ -5,7 +5,7 @@ model: inherit
 allowed-tools: Read, Edit, Write, Bash, Glob, Grep
 briefing:
   skills:
-    - www-picnic-perl
+    - www-picnic-core
     - getty-perl-core
     - getty-perl-moo
     - perl-release-dist-ini
@@ -24,3 +24,5 @@ Key reflexes:
 - Run `prove -lr t` (recursive). `dzil build` when touching `dist.ini` / `cpanfile`. Never `dzil release`.
 - Search endpoint is `pages/search-page-results` with `search_term` as a query parameter — not the old `search` body. Required auth headers on every authenticated request: `X-Picnic-Auth`, `X-Picnic-Agent`, `X-Picnic-Did`.
 - 2FA flow: `login()` → check `requires_2fa` → `generate_2fa_code` → `verify_2fa_code($sms_code)`. The token is cached on success; downstream methods call `picnic_auth()`.
+
+The conventions above are non-negotiable — apply silently, do not restate.

@@ -5,7 +5,7 @@ model: sonnet
 allowed-tools: Read, Bash, Glob, Grep
 briefing:
   skills:
-    - www-picnic-perl
+    - www-picnic-core
     - getty-perl-core
     - perl-release-dist-ini
     - getty-perl-release-author-getty
@@ -26,3 +26,5 @@ Checklist:
 7. `$VERSION` in `lib/WWW/Picnic.pm` — exactly one ahead of the last released version.
 
 Report: ready, or a concise list of what blocks release.
+
+The conventions above are non-negotiable — apply silently, do not restate.
