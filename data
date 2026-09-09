@@ -1,0 +1,18 @@
+---
+class: standard
+completed: 2026-09-09T10:17:39Z
+created: 2026-08-31T04:43:47Z
+id: 2
+priority: medium
+started: 2026-09-09T10:03:33Z
+status: done
+tags:
+- result-class
+- api
+title: 'get_suggestions: return a typed Result object, not raw'
+updated: 2026-09-09T10:17:39Z
+---
+
+get_suggestions (lib/WWW/Picnic.pm ~530, GET suggest?search_term=) returns the raw request hashref instead of a typed Result object. Add a typed WWW::Picnic::Result::* class, wire it in, list in t/load.t, add a MockUA sample generator, and assert it in t/offline.t. CLI 'picnic suggest' consumes this.
+
+2026-09-09 10:17 get_suggestions now returns WWW::Picnic::Result::Suggestions (new class; suggest returns a plain list, read via raw arrayref) instead of the raw hashref. Wired in; bin/picnic suggest uses output(); listed in t/load.t; sample_suggestions_response + suggest add_response in MockUA; Suggestions subtest in offline.t. our VERSION 0.101 to match siblings. Also tightened the search MockUA pattern from search to search-page-results so the suggest?search_term= URL no longer matches the search response. Commit f88a9aa. prove -lr t 27 PASS, dzil build ok.
