@@ -1,0 +1,17 @@
+---
+class: standard
+completed: 2026-09-09T10:17:58Z
+created: 2026-08-31T04:43:51Z
+id: 3
+priority: medium
+started: 2026-09-09T10:03:37Z
+status: done
+tags:
+- test-coverage
+title: 'set_delivery_slot: add offline test coverage'
+updated: 2026-09-09T10:17:58Z
+---
+
+set_delivery_slot (lib/WWW/Picnic.pm ~498, POST cart/set_delivery_slot) has no MockUA response registered and no subtest in t/offline.t, while every other WWW::Picnic method does. Add an add_response for cart/set_delivery_slot (sample_cart_response) and a subtest asserting the returned WWW::Picnic::Result::Cart.
+
+2026-09-09 10:17 set_delivery_slot already returned WWW::Picnic::Result::Cart; added the missing offline coverage: cart/set_delivery_slot add_response reusing sample_cart_response, plus a Set delivery slot subtest in t/offline.t asserting the returned Cart (isa Cart, id shopping_cart, total_count 3). No code change needed. Commit f88a9aa. prove -lr t 27 PASS (was 22).
