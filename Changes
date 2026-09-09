@@ -1,5 +1,9 @@
 {{$NEXT}}
     - Enable UTF-8 and convert_blessed for JSON::MaybeXS
+    - get_categories now returns a WWW::Picnic::Result::Categories object
+      instead of the raw hashref
+    - get_suggestions now returns a WWW::Picnic::Result::Suggestions object
+      instead of the raw hashref
 
 0.100     2026-01-11 06:17:48Z
 

@@ -15,6 +15,8 @@ use WWW::Picnic::Result::Cart;
 use WWW::Picnic::Result::DeliverySlots;
 use WWW::Picnic::Result::Search;
 use WWW::Picnic::Result::Article;
+use WWW::Picnic::Result::Categories;
+use WWW::Picnic::Result::Suggestions;
 
 =head1 SYNOPSIS
 
@@ -514,7 +516,7 @@ L<WWW::Picnic::Result::Cart> object.
 sub get_categories {
   my ( $self, $depth ) = @_;
   $depth //= 0;
-  return $self->request( GET => 'my_store', undef, depth => $depth );
+  return WWW::Picnic::Result::Categories->new( $self->request( GET => 'my_store', undef, depth => $depth ) );
 }
 
 =method get_categories
@@ -523,20 +525,21 @@ sub get_categories {
     my $categories = $picnic->get_categories(2);  # with depth
 
 Get product categories. Optionally specify depth for nested categories.
-Returns raw API response (categories structure varies).
+Returns a L<WWW::Picnic::Result::Categories> object.
 
 =cut
 
 sub get_suggestions {
   my ( $self, $term ) = @_;
-  return $self->request( GET => 'suggest', undef, search_term => $term );
+  return WWW::Picnic::Result::Suggestions->new( $self->request( GET => 'suggest', undef, search_term => $term ) );
 }
 
 =method get_suggestions
 
     my $suggestions = $picnic->get_suggestions('app');
 
-Get search suggestions for a partial search term. Returns raw API response.
+Get search suggestions for a partial search term. Returns a
+L<WWW::Picnic::Result::Suggestions> object.
 
 =cut
 

@@ -394,7 +394,7 @@ my %commands = (
     my $depth = shift @ARGV // 0;
     do_login();
     my $cats = $picnic->get_categories($depth);
-    print $json->encode($cats);
+    output($cats);
   },
 
   suggest => sub {
@@ -402,7 +402,7 @@ my %commands = (
     die "Usage: picnic suggest <term>\n" unless $term;
     do_login();
     my $suggestions = $picnic->get_suggestions($term);
-    print $json->encode($suggestions);
+    output($suggestions);
   },
 );
 
