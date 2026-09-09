@@ -1,0 +1,18 @@
+---
+class: standard
+completed: 2026-09-09T10:17:19Z
+created: 2026-08-31T04:43:42Z
+id: 1
+priority: medium
+started: 2026-09-09T10:03:29Z
+status: done
+tags:
+- result-class
+- api
+title: 'get_categories: return a typed Result object, not raw'
+updated: 2026-09-09T10:17:19Z
+---
+
+get_categories (lib/WWW/Picnic.pm ~514, GET my_store) returns the raw request hashref instead of a typed WWW::Picnic::Result::* object, breaking the house pattern that every endpoint with a shape wraps its response. Add WWW::Picnic::Result::Category (or similar), wire it into WWW::Picnic.pm (use + return), list it in t/load.t, add a sample generator to t/lib/WWW/Picnic/MockUA.pm, and cover it in t/offline.t. CLI 'picnic categories' consumes this.
+
+2026-09-09 10:17 get_categories now returns WWW::Picnic::Result::Categories (new collection class mirroring DeliverySlots) instead of the raw hashref. Wired use+wrap in Picnic.pm; adapted bin/picnic categories to the shared output() helper (a blessed object cannot use the CLIs plain JSON encoder); listed in t/load.t; added sample_categories_response + my_store add_response in MockUA; Categories subtest in offline.t. New class carries our VERSION 0.101 to match all 8 sibling Result classes and base (in-repo convention). Commit f88a9aa. prove -lr t 27 PASS (was 22), dzil build ok, META lists package at 0.101.
