@@ -1,6 +1,6 @@
 package WWW::Picnic::Result;
 # ABSTRACT: Base class for Picnic API result objects
-our $VERSION = '0.101';
+our $VERSION = '0.102';
 use Moo;
 
 =head1 SYNOPSIS

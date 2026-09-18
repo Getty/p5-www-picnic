@@ -1,6 +1,6 @@
 package WWW::Picnic::Result::Suggestions;
 # ABSTRACT: Collection of Picnic search suggestions
-our $VERSION = '0.101';
+our $VERSION = '0.102';
 use Moo;
 
 extends 'WWW::Picnic::Result';

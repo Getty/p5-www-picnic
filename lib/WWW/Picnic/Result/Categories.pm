@@ -1,6 +1,6 @@
 package WWW::Picnic::Result::Categories;
 # ABSTRACT: Collection of Picnic store categories
-our $VERSION = '0.101';
+our $VERSION = '0.102';
 use Moo;
 
 extends 'WWW::Picnic::Result';
