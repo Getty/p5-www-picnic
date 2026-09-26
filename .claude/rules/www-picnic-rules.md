@@ -26,7 +26,7 @@ This rule depends on whether the Agent/Task tool is available to you.
 
 - **You can spawn subagents** (orchestrating main agent): do NOT touch behavior-relevant
   code yourself — delegate to this repo's worker. Your lane: coordinate, inspect, plan,
-  review diffs, run tests, manage git, edit non-behavioral docs. When in doubt, delegate.
+  review diffs, run tests, edit non-behavioral docs. When in doubt, delegate.
   Only the `www-picnic-*` agents get their skills force-loaded via `briefing.skills`; you
   get no briefing and would touch internals with too little context.
 
@@ -34,7 +34,7 @@ This rule depends on whether the Agent/Task tool is available to you.
   |---|---|
   | Implement / refactor / debug behavior-relevant code | `www-picnic-worker` (default) |
   | Write/extend tests | `www-picnic-test-writer` |
-  | Pre-release audit | `www-picnic-release-checker` |
+  | Commits, `Changes`, card → done, pre-release audit | `www-picnic-release-manager` |
   | Write/maintain POD | `www-picnic-doc-writer` |
 
 - **You cannot spawn subagents** (you ARE a `www-picnic-*` agent): the delegation lock
@@ -44,12 +44,15 @@ Behavior-relevant = runtime behavior, the public API (`WWW::Picnic`, `::Result::
 and 2FA flow, search/cart/article endpoints, CLI commands, error handling, tests,
 performance. Pure prose docs and `Changes` notes are not.
 
+**Only `www-picnic-release-manager` commits.** A worker leaves a commit-ready tree and hands its card
+to `review`; you then dispatch `www-picnic-release-manager` to cut the commit and close the card.
+
 ## Release — never without permission
 
 `prove -lr t` and `dzil build`/`dzil test` are fine anytime. `dzil release` and any CPAN
 upload are STRICTLY forbidden without the maintainer's explicit go-ahead — even if a plan
 or STATUS document lists "release" as the next step. For anything heading toward release:
-stop and ask. Use the `www-picnic-release-checker` agent for the pre-release audit.
+stop and ask. Use the `www-picnic-release-manager` agent for the pre-release audit.
 
 ## Public issues — never act without instruction
 

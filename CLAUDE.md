@@ -13,7 +13,7 @@ principle and lane are in `.claude/rules/www-picnic-rules.md`.
 |---|---|
 | Implement / refactor / debug behavior-relevant code | `www-picnic-worker` (default) |
 | Write/extend tests | `www-picnic-test-writer` |
-| Pre-release audit | `www-picnic-release-checker` |
+| Commits, `Changes`, card → done, pre-release audit | `www-picnic-release-manager` |
 | Write/maintain POD | `www-picnic-doc-writer` |
 
 The agents carry their skills via `briefing.skills` (see `.claude/agents/`); the main
