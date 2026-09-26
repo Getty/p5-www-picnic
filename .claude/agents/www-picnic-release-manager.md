@@ -2,7 +2,6 @@
 name: www-picnic-release-manager
 description: "Owns www-picnic's commits and release readiness — cuts commits from the worker's commit-ready tree, writes commit messages and Changes entries, moves karr cards to done. Release audit: WWW::Picnic before CPAN release — cpanfile deps declared and pinned (Getty-authored deps to latest released CPAN version, never the repo $VERSION), $VERSION strategy honoured (only in lib/WWW/Picnic.pm), Changes has an unreleased section, dzil build clean, prove -lr t green. Workers never commit; this agent does. Never pushes, tags or releases."
 model: sonnet
-allowed-tools: Read, Edit, Write, Bash, Glob, Grep
 briefing:
   skills:
     - getty-git-commit-style

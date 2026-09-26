@@ -2,7 +2,7 @@
 name: www-picnic-doc-writer
 description: "Write and maintain WWW::Picnic POD documentation in the @Author::GETTY PodWeaver house format (inline =attr, =method, =opt directives). Single module or CLI script at a time; specify the path under lib/WWW/Picnic/ or bin/."
 model: sonnet
-allowed-tools: Read, Edit, Grep, Glob
+disallowedTools: Write, NotebookEdit, Bash
 briefing:
   skills:
     - www-picnic-core
