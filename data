@@ -1,0 +1,25 @@
+---
+class: standard
+completed: 2026-10-15T03:14:19Z
+created: 2026-10-06T19:50:09Z
+id: 5
+priority: medium
+started: 2026-10-15T03:12:05Z
+status: done
+tags:
+- bug
+- auth
+- review-2026-10-06
+title: 'An expired session is never renewed: request() has no 401 handling and _auth_cache->{time}
+  is written but never read'
+updated: 2026-10-15T03:14:19Z
+---
+
+`picnic_auth` logs in once, when `_auth_cache->{auth}` is undefined, and returns the cached token forever after. `login` and `verify_2fa_code` record `_auth_cache->{time}` (`lib/WWW/Picnic.pm:213` and `:275`), but nothing reads it (`grep -n '{time}' lib/WWW/Picnic.pm` shows only the two assignments). `request` (line 322 ff.) croaks on every non-2xx, including the 401 an expired or revoked token gets.
+
+A long-running process (a bot watching delivery slots is the obvious use of this module) therefore fails on every call once the token is gone, until it builds a new object. There is no public way to drop the cached token either.
+
+Done when: on a 401 `request` clears the cache, logs in once more (croaking as today if 2FA is required) and retries the call once; the dead `time` bookkeeping is either used for a max age or removed; `t/offline.t` covers 401 -> re-login -> success.
+
+---
+Fleet review 2026-10-06 · kind: bug · confidence: verified
