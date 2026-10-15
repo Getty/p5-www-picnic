@@ -187,4 +187,39 @@ subtest 'Result raw access' => sub {
   is($user->raw->{firstname}, 'Max', 'Can access raw data');
 };
 
+subtest '2FA flow sends pending token and device headers' => sub {
+  my $ua = WWW::Picnic::MockUA->new;
+  $ua->add_response('user/login', WWW::Picnic::MockUA::sample_login_2fa_response(),
+    headers => { 'X-Picnic-Auth' => 'pending-token' });
+  $ua->add_response('user/2fa/generate', {});
+  $ua->add_response('user/2fa/verify', undef, raw => '',
+    headers => { 'X-Picnic-Auth' => 'final-token' });
+  $ua->add_response('api/\d+/user$', WWW::Picnic::MockUA::sample_user_response());
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country, http_agent => $ua,
+  );
+
+  my $login = $p->login;
+  ok($login->requires_2fa, 'login requires 2FA');
+  ok(!$p->_auth_cache->{auth}, 'pending token is not a full login');
+  is($p->_auth_cache->{pending}, 'pending-token', 'pending token kept');
+
+  ok($p->generate_2fa_code, 'generate_2fa_code');
+  ok($p->verify_2fa_code('123456'), 'verify_2fa_code tolerates empty body');
+
+  my ( $l, $gen, $ver ) = $ua->all_requests;
+  for my $r ( $gen, $ver ) {
+    is($r->header('X-Picnic-Auth'), 'pending-token', $r->uri->path.': pending token sent');
+    is($r->header('X-Picnic-Agent'), $p->picnic_agent, $r->uri->path.': agent sent');
+    is($r->header('X-Picnic-Did'), $p->picnic_did, $r->uri->path.': did sent');
+  }
+  like($gen->content, qr/"channel"\s*:\s*"SMS"/, 'generate body');
+  like($ver->content, qr/"otp"\s*:\s*"123456"/, 'verify body');
+
+  is($p->picnic_auth, 'final-token', 'final token cached');
+  ok(!exists $p->_auth_cache->{pending}, 'pending cleared after verify');
+  $p->get_user;
+  is(($ua->all_requests)[-1]->header('X-Picnic-Auth'), 'final-token', 'later requests use final token');
+};
+
 done_testing;

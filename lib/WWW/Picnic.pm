@@ -208,7 +208,10 @@ sub login {
     my $auth = $response->header('X-Picnic-Auth');
     my $data = $self->json->decode($response->content);
     $data->{auth_key} = $auth;
-    if ($auth && $data->{user_id} && !$data->{second_factor_authentication_required}) {
+    delete $self->_auth_cache->{pending};
+    if ($auth && $data->{second_factor_authentication_required}) {
+      $self->_auth_cache->{pending} = $auth;
+    } elsif ($auth && $data->{user_id}) {
       $self->_auth_cache->{auth} = $auth;
       $self->_auth_cache->{time} = time;
       $self->_auth_cache->{user_id} = $data->{user_id};
@@ -229,23 +232,35 @@ sub login {
 Authenticates with the Picnic API. Returns a L<WWW::Picnic::Result::Login>
 object that indicates whether two-factor authentication is required.
 
-If 2FA is not required, the auth token is cached automatically.
+If 2FA is not required, the auth token is cached automatically. If 2FA is
+required, the pending token from the response is kept separately and sent with
+L</generate_2fa_code> and L</verify_2fa_code>.
 
 =cut
 
 sub generate_2fa_code {
   my ( $self, $channel ) = @_;
   $channel //= 'SMS';
-  my $url = URI->new(join('/',$self->api_endpoint,'user','2fa','generate'));
-  my $request = HTTP::Request->new( POST => $url );
-  $request->header('Accept' => 'application/json');
-  $request->header('Content-Type' => 'application/json; charset=UTF-8');
-  $request->content($self->json->encode({ channel => $channel }));
-  my $response = $self->http_agent->request($request);
+  my $response = $self->_2fa_request( 'generate', { channel => $channel } );
   unless ($response->is_success) {
     croak __PACKAGE__.": 2FA code generation failed! ".$response->status_line;
   }
   return 1;
+}
+
+sub _2fa_request {
+  my ( $self, $step, $data ) = @_;
+  my $pending = $self->_auth_cache->{pending};
+  croak __PACKAGE__.": no pending 2FA login, call login() first" unless $pending;
+  my $url = URI->new(join('/',$self->api_endpoint,'user','2fa',$step));
+  my $request = HTTP::Request->new( POST => $url );
+  $request->header('Accept' => 'application/json');
+  $request->header('Content-Type' => 'application/json; charset=UTF-8');
+  $request->header('X-Picnic-Auth' => $pending );
+  $request->header('X-Picnic-Agent' => $self->picnic_agent );
+  $request->header('X-Picnic-Did' => $self->picnic_did );
+  $request->content($self->json->encode($data));
+  return $self->http_agent->request($request);
 }
 
 =method generate_2fa_code
@@ -261,19 +276,18 @@ Call this after L</login> returns a result requiring 2FA.
 sub verify_2fa_code {
   my ( $self, $code ) = @_;
   croak __PACKAGE__.": 2FA code required" unless defined $code;
-  my $url = URI->new(join('/',$self->api_endpoint,'user','2fa','verify'));
-  my $request = HTTP::Request->new( POST => $url );
-  $request->header('Accept' => 'application/json');
-  $request->header('Content-Type' => 'application/json; charset=UTF-8');
-  $request->content($self->json->encode({ otp => $code }));
-  my $response = $self->http_agent->request($request);
+  my $response = $self->_2fa_request( 'verify', { otp => $code } );
   if ($response->is_success) {
     my $auth = $response->header('X-Picnic-Auth');
     croak __PACKAGE__.": 2FA verify success, but no auth token!" unless $auth;
-    my $data = $self->json->decode($response->content);
+    my $content = $response->content;
+    my $data = ( defined $content && length $content )
+      ? $self->json->decode($content) : {};
+    $data = {} unless ref $data eq 'HASH';
     $self->_auth_cache->{auth} = $auth;
     $self->_auth_cache->{time} = time;
     $self->_auth_cache->{user_id} = $data->{user_id} if $data->{user_id};
+    delete $self->_auth_cache->{pending};
     return 1;
   } else {
     croak __PACKAGE__.": 2FA verification failed! ".$response->status_line;

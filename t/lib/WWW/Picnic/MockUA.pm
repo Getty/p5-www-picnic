@@ -26,6 +26,7 @@ sub add_response {
     data    => $response_data,
     status  => $opts{status} // 200,
     headers => $opts{headers} // {},
+    raw     => $opts{raw},
   };
 }
 
@@ -40,7 +41,7 @@ sub request {
     if ($uri =~ /$pattern/) {
       my $resp_config = $self->{responses}{$pattern};
       my $response = HTTP::Response->new($resp_config->{status});
-      $response->content($json->encode($resp_config->{data}));
+      $response->content(defined $resp_config->{raw} ? $resp_config->{raw} : $json->encode($resp_config->{data}));
       $response->header('Content-Type' => 'application/json');
       for my $header (keys %{$resp_config->{headers}}) {
         $response->header($header => $resp_config->{headers}{$header});
