@@ -213,7 +213,6 @@ sub login {
       $self->_auth_cache->{pending} = $auth;
     } elsif ($auth && $data->{user_id}) {
       $self->_auth_cache->{auth} = $auth;
-      $self->_auth_cache->{time} = time;
       $self->_auth_cache->{user_id} = $data->{user_id};
     }
     return WWW::Picnic::Result::Login->new($data);
@@ -285,7 +284,6 @@ sub verify_2fa_code {
       ? $self->json->decode($content) : {};
     $data = {} unless ref $data eq 'HASH';
     $self->_auth_cache->{auth} = $auth;
-    $self->_auth_cache->{time} = time;
     $self->_auth_cache->{user_id} = $data->{user_id} if $data->{user_id};
     delete $self->_auth_cache->{pending};
     return 1;
@@ -341,16 +339,22 @@ sub request {
   if (%params) {
     $url->query_form(%params);
   }
-  my $request = HTTP::Request->new( $method => $url );
-  $request->header('Accept' => 'application/json');
-  $request->header('X-Picnic-Auth' => $self->picnic_auth );
-  $request->header('X-Picnic-Agent' => $self->picnic_agent );
-  $request->header('X-Picnic-Did' => $self->picnic_did );
-  if (defined $data) {
-    $request->header('Content-Type' => 'application/json');
-    $request->content($self->json->encode($data));
+  my $response;
+  for my $attempt ( 1, 2 ) {
+    my $request = HTTP::Request->new( $method => $url );
+    $request->header('Accept' => 'application/json');
+    $request->header('X-Picnic-Auth' => $self->picnic_auth );
+    $request->header('X-Picnic-Agent' => $self->picnic_agent );
+    $request->header('X-Picnic-Did' => $self->picnic_did );
+    if (defined $data) {
+      $request->header('Content-Type' => 'application/json');
+      $request->content($self->json->encode($data));
+    }
+    $response = $self->http_agent->request($request);
+    last unless $response->code == 401 and $attempt == 1;
+    # Expired or revoked token: drop it, picnic_auth logs in again, retry once
+    delete @{$self->_auth_cache}{qw( auth user_id pending )};
   }
-  my $response = $self->http_agent->request($request);
   unless ($response->is_success) {
     croak __PACKAGE__.": request to ".$url->as_string." failed! ".$response->status_line;
   }
@@ -376,6 +380,11 @@ Parameters:
 =item * C<%params> - Optional query parameters
 
 =back
+
+If the API answers with C<401> (expired or revoked token), the cached
+authentication is discarded, L</picnic_auth> logs in again (croaking as usual
+if 2FA is required) and the call is repeated exactly once. A second C<401>, or
+any other non-2xx status, croaks.
 
 This is a low-level method used internally by other methods. You typically won't
 need to call it directly unless accessing undocumented API endpoints.

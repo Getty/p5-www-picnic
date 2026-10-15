@@ -222,4 +222,45 @@ subtest '2FA flow sends pending token and device headers' => sub {
   is(($ua->all_requests)[-1]->header('X-Picnic-Auth'), 'final-token', 'later requests use final token');
 };
 
+{
+  package SeqUA;
+  our @ISA = ('WWW::Picnic::MockUA');
+  # answers the first $n calls to api/.../user with 401
+  sub request {
+    my ( $self, $req ) = @_;
+    my $res = $self->SUPER::request($req);
+    if ( $req->uri->path =~ m{/user$} and $self->{fail}-- > 0 ) {
+      $res->code(401);
+    }
+    return $res;
+  }
+}
+
+subtest '401 triggers one re-login and retry' => sub {
+  my $ua = SeqUA->new( fail => 1 );
+  $ua->add_response('user/login', WWW::Picnic::MockUA::sample_login_response(),
+    headers => { 'X-Picnic-Auth' => 'tok' });
+  $ua->add_response('api/\d+/user$', WWW::Picnic::MockUA::sample_user_response());
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country, http_agent => $ua,
+  );
+  ok($p->get_user, 'call succeeds after re-login');
+  my @paths = map { $_->uri->path } $ua->all_requests;
+  is(scalar(grep { m{user/login$} } @paths), 2, 'logged in twice');
+  is(scalar(grep { m{/user$} } @paths), 2, 'call made twice');
+};
+
+subtest 'second 401 croaks without looping' => sub {
+  my $ua = SeqUA->new( fail => 100 );
+  $ua->add_response('user/login', WWW::Picnic::MockUA::sample_login_response(),
+    headers => { 'X-Picnic-Auth' => 'tok' });
+  $ua->add_response('api/\d+/user$', WWW::Picnic::MockUA::sample_user_response());
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country, http_agent => $ua,
+  );
+  eval { $p->get_user };
+  like($@, qr/401/, 'croaks on repeated 401');
+  is(scalar(grep { $_->uri->path =~ m{/user$} } $ua->all_requests), 2, 'exactly one retry');
+};
+
 done_testing;
