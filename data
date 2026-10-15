@@ -1,0 +1,23 @@
+---
+class: standard
+completed: 2026-10-15T03:14:24Z
+created: 2026-10-06T19:50:14Z
+id: 6
+priority: medium
+started: 2026-10-15T03:09:46Z
+status: done
+tags:
+- deps
+- review-2026-10-06
+title: 'cpanfile: LWP::Protocol::https and URI missing'
+updated: 2026-10-15T03:14:24Z
+---
+
+`api_endpoint` (`lib/WWW/Picnic.pm:122`) is `https://storefront-prod.<country>.picnicinternational.com/...`; there is no plain-HTTP variant. `cpanfile` lists `JSON::MaybeXS`, `HTTP::Message`, `LWP::UserAgent`, `Moo`. `LWP::Protocol::https` is a separate distribution, so a clean install answers the first call with `501 Protocol scheme 'https' is not supported`, reported as `login failed! 501 ...`. (p5-www-metaforge fixed the same in its k5.)
+
+`URI` is used directly (`URI->new`, `->query_form`) and only arrives transitively.
+
+Done when: `cpanfile` requires `LWP::Protocol::https` and `URI`.
+
+---
+Fleet review 2026-10-06 · kind: hygiene · confidence: verified
