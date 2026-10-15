@@ -1,0 +1,30 @@
+---
+class: standard
+completed: 2026-10-15T03:14:14Z
+created: 2026-10-06T19:50:04Z
+id: 4
+priority: medium
+started: 2026-10-15T03:10:36Z
+status: done
+tags:
+- bug
+- auth
+- review-2026-10-06
+title: '2FA flow: generate_2fa_code/verify_2fa_code send neither X-Picnic-Auth nor
+  the agent/device headers, and login drops the token it would need'
+updated: 2026-10-15T03:14:14Z
+---
+
+`lib/WWW/Picnic.pm`:
+
+- `login` (lines 195-222) reads the `X-Picnic-Auth` header, but when the answer says `second_factor_authentication_required` it stores it only in the returned result (`$data->{auth_key} = $auth`, line 210) and not in `_auth_cache`.
+- `generate_2fa_code` (236-249) and `verify_2fa_code` (261-281) build their requests by hand with `Accept` and `Content-Type` only. Unlike `request` (322 ff.) they set no `X-Picnic-Auth`, no `X-Picnic-Agent` and no `X-Picnic-Did`.
+
+So the two 2FA calls go out completely unauthenticated: the server has no way to know which pending login the code belongs to. The reference clients (python-picnic-api2 and the app) send the token obtained at login plus the agent/device-id headers on exactly these two calls. That the API rejects the calls as sent here is not verified live -- `t/basic.t:30-34` skips as soon as 2FA is required and `t/offline.t` only covers the no-2FA login -- hence `plausible`.
+
+Also in `verify_2fa_code`: `$self->json->decode($response->content)` is called unconditionally on success and dies on an empty body, after the code has already been consumed.
+
+Done when: the pending token from `login` is kept (separately from the 'fully logged in' state), both 2FA calls go through one request builder that sets the three headers, an empty verify body is tolerated, and `t/offline.t` drives login -> generate -> verify against the mock and asserts the headers of each request.
+
+---
+Fleet review 2026-10-06 · kind: bug · confidence: plausible
