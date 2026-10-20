@@ -565,7 +565,8 @@ Add a product to your shopping cart. You can specify either:
 If the product name matches multiple products, a list of matches will be
 shown and you'll need to be more specific or use the product ID.
 
-The optional I<count> parameter specifies the quantity (default: 1).
+The optional I<count> parameter specifies the quantity (default: 1). It must be
+a positive integer.
 
 =head2 remove I<product_id> [I<count>]
 
@@ -573,7 +574,7 @@ The optional I<count> parameter specifies the quantity (default: 1).
     picnic remove s1234567 2
 
 Remove a product from your shopping cart. The optional I<count> parameter
-specifies how many to remove (default: 1).
+specifies how many to remove (default: 1). It must be a positive integer.
 
 =head2 categories [I<depth>]
 

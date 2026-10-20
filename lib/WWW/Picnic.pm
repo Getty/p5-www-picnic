@@ -545,6 +545,16 @@ sub _require_argument {
   return $value;
 }
 
+# The count of the products to add to or to remove from the cart: a positive
+# integer. The command line hands the count over as a string, so the digits
+# are enough.
+sub _require_count {
+  my ( $self, $method, $count ) = @_;
+  croak $method.": count must be a positive integer"
+    unless defined $count and $count =~ /\A[0-9]+\z/ and $count > 0;
+  return $count;
+}
+
 # The one place a caller-supplied value becomes part of a request path: the
 # value must stay one segment whatever it holds.
 sub _path_segment {
@@ -583,6 +593,7 @@ sub add_to_cart {
   my ( $self, $product_id, $count ) = @_;
   $self->_require_argument( 'add_to_cart', 'product_id', $product_id );
   $count //= 1;
+  $self->_require_count( 'add_to_cart', $count );
   return WWW::Picnic::Result::Cart->new(
     $self->request( POST => 'cart/add_product', { product_id => $product_id, count => $count } )
   );
@@ -596,7 +607,8 @@ sub add_to_cart {
 Add a product to your shopping cart. Optionally specify quantity (default: 1).
 Returns the updated L<WWW::Picnic::Result::Cart> object.
 
-Croaks when the product id is missing or empty.
+Croaks when the product id is missing or empty, and when the count is not a
+positive integer.
 
 =cut
 
@@ -604,6 +616,7 @@ sub remove_from_cart {
   my ( $self, $product_id, $count ) = @_;
   $self->_require_argument( 'remove_from_cart', 'product_id', $product_id );
   $count //= 1;
+  $self->_require_count( 'remove_from_cart', $count );
   return WWW::Picnic::Result::Cart->new(
     $self->request( POST => 'cart/remove_product', { product_id => $product_id, count => $count } )
   );
@@ -617,7 +630,8 @@ sub remove_from_cart {
 Remove a product from your shopping cart. Optionally specify quantity (default: 1).
 Returns the updated L<WWW::Picnic::Result::Cart> object.
 
-Croaks when the product id is missing or empty.
+Croaks when the product id is missing or empty, and when the count is not a
+positive integer.
 
 =cut
 

@@ -512,4 +512,44 @@ subtest 'the arguments of the product methods are checked' => sub {
   }
 };
 
+subtest 'the count of the cart methods is checked' => sub {
+  my $ua = WWW::Picnic::MockUA->new;
+  $ua->add_response('user/login', WWW::Picnic::MockUA::sample_login_response(),
+    headers => { 'X-Picnic-Auth' => 'mock-auth-token-12345' });
+  $ua->add_response('cart/add_product', WWW::Picnic::MockUA::sample_cart_response());
+  $ua->add_response('cart/remove_product', WWW::Picnic::MockUA::sample_cart_response());
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country, http_agent => $ua,
+  );
+
+  my @methods = (
+    [ 'add_to_cart',      sub { $p->add_to_cart(@_) } ],
+    [ 'remove_from_cart', sub { $p->remove_from_cart(@_) } ],
+  );
+
+  # Zero, a negative number, a fraction and free text are no counts.
+  my @bad_counts = ( 0, -1, 1.5, 'abc', '2x' );
+  for my $method ( @methods ) {
+    my ( $name, $code ) = @$method;
+
+    for my $count ( @bad_counts ) {
+      my $err = do { eval { $code->( 'product-1', $count ) }; $@ };
+      ok( $err, "$name: the count $count is refused" );
+      like( $err, qr/^\Q$name\E: count must be a positive integer/,
+        "$name: the message names the method and the count" );
+    }
+  }
+
+  # The default of one, a number and the digits of the command line are counts.
+  my $cart = $p->add_to_cart('product-1');
+  isa_ok($cart, 'WWW::Picnic::Result::Cart');
+  like( ($ua->all_requests)[-1]->content, qr/"count"\s*:\s*1/, 'the default count is one' );
+
+  $p->remove_from_cart('product-1', 3);
+  like( ($ua->all_requests)[-1]->content, qr/"count"\s*:\s*3/, 'the count is sent' );
+
+  $p->add_to_cart('product-1', '4');
+  like( ($ua->all_requests)[-1]->content, qr/"count"\s*:\s*"?4"?/, 'the count of the command line is sent' );
+};
+
 done_testing;

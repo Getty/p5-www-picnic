@@ -67,6 +67,8 @@ picnic categories
 picnic suggest har
 ```
 
+The count of `add` and `remove` is a positive integer, one when it is left out.
+
 ### Options
 
 ```bash
@@ -118,7 +120,7 @@ my $cart = $picnic->get_cart;
 say "Items: ", $cart->total_count;
 say "Total: ", sprintf("%.2f", $cart->total_price / 100), " EUR";
 
-$picnic->add_to_cart('s1234567', 2);
+$picnic->add_to_cart('s1234567', 2);   # the count is a positive integer
 $picnic->remove_from_cart('s1234567', 1);
 $picnic->clear_cart;
 
