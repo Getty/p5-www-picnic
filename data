@@ -1,0 +1,26 @@
+---
+claimed_at: 2026-10-20T09:42:52Z
+claimed_by: k7-k12
+class: standard
+completed: 2026-10-20T09:42:52Z
+created: 2026-10-20T08:49:30Z
+id: 10
+priority: medium
+started: 2026-10-20T09:19:51Z
+status: done
+tags:
+- http
+- encoding
+title: Path parameters must be encoded as one segment
+updated: 2026-10-20T09:42:52Z
+---
+
+The id goes into the path unencoded.
+
+lib/WWW/Picnic.pm:473 interpolates the value into "articles/$product_id"; URI does not normalise "..", so get_article('../cart') addresses GET /api/15/cart, another endpoint, and the cart ends up in a WWW::Picnic::Result::Article. An empty or undefined value is not checked either: get_article(undef) gives articles/, add_to_cart(undef) gives product_id: null, search(undef) gives ?search_term without a value.
+
+Decide: the id is encoded as one UTF-8 percent encoded segment, and '', '.', '..' are rejected. WWW::PayPal::Role::OpenAPI::_path_segment (lib/WWW/PayPal/Role/OpenAPI.pm:93-111) is the pattern to follow.
+
+The test that holds this down must be red against the old lib/ and fail as a failed expectation, not as a die.
+
+Commit: 8b6e6dd — die Produkt-ID von get_article wird als ein escaptes Pfadsegment geschickt; '', '.' und '..' werden abgelehnt. Red proof gegen das alte lib: die drei neuen Subtests schlagen fehl (erwartete Fehlschlaege, keine Exceptions).
