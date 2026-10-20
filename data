@@ -1,0 +1,40 @@
+---
+class: standard
+completed: 2026-10-20T16:57:23Z
+created: 2026-10-20T16:36:34Z
+id: 16
+priority: low
+started: 2026-10-20T16:57:23Z
+status: done
+tags:
+- release
+- changes
+title: Der Changes traegt keine Kopfzeile
+updated: 2026-10-20T16:57:23Z
+---
+
+Der Changes dieser Distribution traegt keine Kopfzeile.
+
+Die Hausform (Skill getty-git-commit-style) sieht so aus:
+
+    Revision history for <name>
+
+    {$NEXT}
+      - ...
+
+Zwoelf der achtzehn Distributionen der WWW-Flotte tragen die Kopfzeile, sechs
+nicht. Diese Distribution gehoert zu den sechs.
+
+Es wird genau eine Zeile ergaenzt: die Kopfzeile mit dem Namen aus dist.ini
+(WWW-Picnic) und die Leerzeile darunter. Sonst nichts.
+
+Kein neuer Eintrag unter {$NEXT}: die Karte aendert die Form der Datei, nicht
+ihren Inhalt. Die Einrueckung der Eintraege (2 oder 4 Leerzeichen) bleibt
+unangetastet - sie ist je Datei verschieden und nicht Teil dieser Karte.
+
+Aenderungen ausserhalb von Changes: nicht.
+Commit-Betreff nennt die Karte als (kNN), kein #NN.
+
+Commit 1d2d5f2: die Kopfzeile 'Revision history for WWW-Picnic' und die Leerzeile darunter stehen ueber {{$NEXT}}; die Eintraege und ihre Einrueckung sind unveraendert, es kam kein neuer Eintrag dazu. Suite gruen (64 Tests, t/basic.t uebersprungen).
+
+Koordination: der Commit 1d2d5f2 steht auf main (ff-only gemergt). Der Changes traegt jetzt die Kopfzeile 'Revision history for WWW-Picnic' mit der Leerzeile darunter, die Einrueckung der Eintraege ist unveraendert.
