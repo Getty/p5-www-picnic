@@ -284,6 +284,15 @@ subtest 'the user agent does not follow a redirect' => sub {
   is( $p->http_agent->max_redirect, 0, 'no redirect is followed' );
 };
 
+subtest 'the request times out and the host in the certificate is checked' => sub {
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country,
+  );
+  my $ua = $p->http_agent;
+  is( $ua->timeout, 30, 'the request does not hang for minutes' );
+  is( $ua->ssl_opts('verify_hostname'), 1, 'the name of the host is checked' );
+};
+
 subtest 'a redirect is an error that names status, method and path' => sub {
   my $ua = WWW::Picnic::MockUA->new;
   $ua->add_response('user/login', WWW::Picnic::MockUA::sample_login_response(),

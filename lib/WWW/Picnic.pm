@@ -131,7 +131,13 @@ has http_agent => (
     my $self = shift;
     # No redirect is followed: a 3xx is an error, and the session token in
     # X-Picnic-Auth must not reach a foreign target.
-    my $ua = LWP::UserAgent->new( max_redirect => 0 );
+    # The request does not hang for minutes, and the name of the host in the
+    # certificate is checked whatever the environment says.
+    my $ua = LWP::UserAgent->new(
+      max_redirect => 0,
+      timeout      => 30,
+      ssl_opts     => { verify_hostname => 1 },
+    );
     $ua->agent($self->http_agent_name);
     return $ua;
   },
@@ -142,7 +148,8 @@ has http_agent => (
 L<LWP::UserAgent> instance used for making HTTP requests to the Picnic API.
 Automatically created with the User-Agent string from L</http_agent_name>.
 It does not follow redirects: a 3xx answer is an error, so the session
-token never reaches a foreign target.
+token never reaches a foreign target. A request times out after 30 seconds
+and the name of the host in the certificate is checked.
 
 =cut
 
