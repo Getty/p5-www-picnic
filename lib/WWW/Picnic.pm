@@ -58,8 +58,9 @@ This module provides a Perl interface to the Picnic Supermarket API. It handles
 authentication and provides methods to search for products, manage your cart,
 and check delivery slots.
 
-B<Note:> The module will eventually get classes for the results. If you use this
-now, please be aware that the return values will change.
+B<Note:> The results are objects: the methods return a
+L<WWW::Picnic::Result::Search>, a L<WWW::Picnic::Result::Cart> and so on. The
+raw answer of the API stays reachable with C<< $result->raw >>.
 
 =cut
 

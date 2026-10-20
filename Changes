@@ -15,6 +15,8 @@
       empty body are errors, only verify_2fa_code tolerates an empty body
     - The product id of get_article is sent as one escaped path segment, the
       values '', '.' and '..' are refused
+    - The documentation tells what the methods return: the results are
+      WWW::Picnic::Result::* objects
 
 0.101     2026-09-18 03:23:15Z
     - Enable UTF-8 and convert_blessed for JSON::MaybeXS
