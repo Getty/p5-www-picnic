@@ -1,0 +1,24 @@
+---
+claimed_at: 2026-10-20T09:43:02Z
+claimed_by: k7-k12
+class: standard
+completed: 2026-10-20T09:43:02Z
+created: 2026-10-20T08:49:39Z
+id: 12
+priority: low
+started: 2026-10-20T09:20:02Z
+status: done
+tags:
+- api
+- arguments
+title: The arguments of the product methods must be checked
+updated: 2026-10-20T09:43:02Z
+---
+
+The argument check is missing throughout.
+
+get_article, add_to_cart, remove_from_cart, set_delivery_slot and search accept undef and the empty string and hand it to the API, which answers with an error message of the API instead of a clear message from the distribution.
+
+Decide: the methods check their argument and croak with a message that names the method and the argument.
+
+Commit: 8f3f50e — get_article, add_to_cart, remove_from_cart, set_delivery_slot und search croaken, wenn ihr Argument fehlt oder leer ist; die Meldung nennt Methode und Argument. Red proof gegen das alte lib: der Subtest schlaegt fehl (17 von 20 Erwartungen rot, keine Exceptions).
