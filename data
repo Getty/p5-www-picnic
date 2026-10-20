@@ -1,0 +1,36 @@
+---
+claimed_at: 2026-10-20T16:05:01Z
+claimed_by: k13-k14-picnic
+class: standard
+completed: 2026-10-20T16:05:01Z
+created: 2026-10-20T15:50:14Z
+id: 14
+priority: low
+started: 2026-10-20T16:05:01Z
+status: done
+tags:
+- documentation
+title: Der Marker WORK IN PROGRESS steht noch in der Modulbeschreibung
+updated: 2026-10-20T16:05:01Z
+---
+
+Die Beschreibung des Moduls traegt noch den Marker "WORK IN PROGRESS".
+
+lib/WWW/Picnic.pm:55 — direkt unter =head1 DESCRIPTION steht
+B<WORK IN PROGRESS>. Das Modul ist fertig: die Methoden sind da, die Tests
+laufen, der Release ist vorbereitet.
+
+Entscheidung des Maintainers (Getty, 2026-10-20): der Marker faellt weg.
+
+Umsetzung:
+- Die Zeile B<WORK IN PROGRESS> entfaellt; der Absatz danach beginnt direkt
+  mit dem Beschreibungstext.
+- Nur der Marker faellt weg — der beschreibende Text bleibt unveraendert,
+  er ist korrekt.
+- Gibt es README oder anderswo noch einen solchen Marker, faellt der dort
+  ebenfalls weg; das Vorkommen ist geprueft (aktuell nur diese eine Stelle).
+
+Kein Test noetig: reine Textaenderung an der Dokumentation, das Verhalten
+aendert sich nicht.
+
+Commit e826f9d: der Marker WORK IN PROGRESS ist aus der Beschreibung des Moduls entfernt, der beschreibende Text ist unveraendert. Die Suite ist gruen (46 Tests), ein Test war nicht noetig (reine Textaenderung).
