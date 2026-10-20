@@ -1,0 +1,43 @@
+---
+claimed_at: 2026-10-20T16:04:56Z
+claimed_by: k13-k14-picnic
+class: standard
+completed: 2026-10-20T16:04:56Z
+created: 2026-10-20T15:50:00Z
+id: 13
+priority: medium
+started: 2026-10-20T16:04:56Z
+status: done
+tags:
+- validation
+title: Der count-Parameter von add_to_cart und remove_from_cart wird nicht geprueft
+updated: 2026-10-20T16:04:56Z
+---
+
+add_to_cart und remove_from_cart nehmen den count-Parameter ungeprueft an.
+
+lib/WWW/Picnic.pm:582 (add_to_cart) und :603 (remove_from_cart) — $count //= 1
+und geht ungeprueft in die Anfrage. Negative Werte, Null, Fliesskomma oder
+Freitext wandern als count in den Warenkorb.
+
+Entscheidung des Maintainers (Getty, 2026-10-20): der count-Parameter wird
+geprueft.
+
+Umsetzung in der Hausform des Moduls (siehe _require_argument und
+_path_segment):
+- count muss eine positive ganze Zahl sein.
+- Fehler wie im Haus: croak $method.": ".$name." ..." — die Meldung nennt
+  die Methode und den Parameter.
+- Die Pruefung gehoert in eine eigene Hilfsfunktion, damit beide Methoden
+  sie benutzen und die Meldung gleich lautet.
+- add_to_cart und remove_from_cart pruefen beide; der Default 1 bleibt
+  gueltig.
+
+Test: neu, und gegen das alte lib nachweislich rot — das alte lib laesst
+den ungueltigen count durch, das neue bricht ab. Kein "Can't locate",
+sondern ein Verhaltensfehler.
+
+Dokumentation: POD von add_to_cart und remove_from_cart, README, falls
+sie den Warenkorb beschreiben.
+
+Commit 0ba8b52: add_to_cart und remove_from_cart croaken jetzt, wenn der count keine positive ganze Zahl ist (0, -1, 1.5, Freitext); der Default 1 und die Ziffern der Kommandozeile bleiben gueltig. Der neue Subtest in t/offline.t war gegen das alte lib nachweislich rot (20 Fehlschlaege, der ungueltige count lief durch), mit dem neuen lib ist die Suite gruen (46 Tests). Also found: die CLI reicht den count als String weiter, im JSON-Body steht damit "3" statt 3 - deshalb akzeptiert die Pruefung Ziffern; das Wire-Format blieb unveraendert.
