@@ -2,8 +2,9 @@
     - Fix 2FA flow: keep the pending token from login and send it together
       with X-Picnic-Agent and X-Picnic-Did on generate_2fa_code and
       verify_2fa_code; tolerate an empty verify_2fa_code response body
-    - Declare LWP::Protocol::https (api_endpoint is https only) and URI in
-      cpanfile
+    - The cpanfile names every library the code loads, including
+      LWP::Protocol::https for the https transport and URI for the escaping,
+      and pins no version where there is none
     - request retries once after a 401: the cached token is dropped and the
       client logs in again, so long-running processes survive an expired
       session; remove the unused _auth_cache time bookkeeping
