@@ -17,6 +17,9 @@
       values '', '.' and '..' are refused
     - The documentation tells what the methods return: the results are
       WWW::Picnic::Result::* objects
+    - The product methods check their argument: get_article, add_to_cart,
+      remove_from_cart, set_delivery_slot and search croak when the id or
+      the search term is missing or empty
 
 0.101     2026-09-18 03:23:15Z
     - Enable UTF-8 and convert_blessed for JSON::MaybeXS

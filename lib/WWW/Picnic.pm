@@ -518,6 +518,7 @@ delivery time slots for your current cart.
 
 sub search {
   my ( $self, $term ) = @_;
+  $self->_require_argument( 'search', 'term', $term );
   return WWW::Picnic::Result::Search->new( $self->request( GET => 'pages/search-page-results', undef, search_term => $term ) );
 }
 
@@ -531,7 +532,18 @@ sub search {
 Search for products by name or term. Returns a L<WWW::Picnic::Result::Search>
 object containing the results.
 
+Croaks when the search term is missing or empty.
+
 =cut
+
+# The argument of a method that goes to the API: it must be there. A clear
+# message beats the answer of the API.
+sub _require_argument {
+  my ( $self, $method, $name, $value ) = @_;
+  croak $method.": ".$name." is required" unless defined $value;
+  croak $method.": ".$name." must not be empty" unless length $value;
+  return $value;
+}
 
 # The one place a caller-supplied value becomes part of a request path: the
 # value must stay one segment whatever it holds.
@@ -546,6 +558,7 @@ sub _path_segment {
 
 sub get_article {
   my ( $self, $product_id ) = @_;
+  $self->_require_argument( 'get_article', 'product_id', $product_id );
   my $segment = $self->_path_segment( 'product_id', $product_id );
   return WWW::Picnic::Result::Article->new( $self->request( GET => 'articles/'.$segment ) );
 }
@@ -562,10 +575,13 @@ L<WWW::Picnic::Result::Article> object.
 The product id is sent as one path segment: it is escaped, and the values
 C<''>, C<.> and C<..> are refused.
 
+Croaks when the product id is missing or empty.
+
 =cut
 
 sub add_to_cart {
   my ( $self, $product_id, $count ) = @_;
+  $self->_require_argument( 'add_to_cart', 'product_id', $product_id );
   $count //= 1;
   return WWW::Picnic::Result::Cart->new(
     $self->request( POST => 'cart/add_product', { product_id => $product_id, count => $count } )
@@ -580,10 +596,13 @@ sub add_to_cart {
 Add a product to your shopping cart. Optionally specify quantity (default: 1).
 Returns the updated L<WWW::Picnic::Result::Cart> object.
 
+Croaks when the product id is missing or empty.
+
 =cut
 
 sub remove_from_cart {
   my ( $self, $product_id, $count ) = @_;
+  $self->_require_argument( 'remove_from_cart', 'product_id', $product_id );
   $count //= 1;
   return WWW::Picnic::Result::Cart->new(
     $self->request( POST => 'cart/remove_product', { product_id => $product_id, count => $count } )
@@ -598,10 +617,13 @@ sub remove_from_cart {
 Remove a product from your shopping cart. Optionally specify quantity (default: 1).
 Returns the updated L<WWW::Picnic::Result::Cart> object.
 
+Croaks when the product id is missing or empty.
+
 =cut
 
 sub set_delivery_slot {
   my ( $self, $slot_id ) = @_;
+  $self->_require_argument( 'set_delivery_slot', 'slot_id', $slot_id );
   return WWW::Picnic::Result::Cart->new(
     $self->request( POST => 'cart/set_delivery_slot', { slot_id => $slot_id } )
   );
@@ -613,6 +635,8 @@ sub set_delivery_slot {
 
 Select a delivery slot for your order. Returns the updated
 L<WWW::Picnic::Result::Cart> object.
+
+Croaks when the slot id is missing or empty.
 
 =cut
 

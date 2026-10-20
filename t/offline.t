@@ -476,4 +476,40 @@ subtest 'a product id that is a dot segment is refused' => sub {
   }
 };
 
+subtest 'the arguments of the product methods are checked' => sub {
+  my $ua = WWW::Picnic::MockUA->new;
+  $ua->add_response('user/login', WWW::Picnic::MockUA::sample_login_response(),
+    headers => { 'X-Picnic-Auth' => 'mock-auth-token-12345' });
+  $ua->add_response('articles/', WWW::Picnic::MockUA::sample_article_response());
+  $ua->add_response('cart/add_product', WWW::Picnic::MockUA::sample_cart_response());
+  $ua->add_response('cart/remove_product', WWW::Picnic::MockUA::sample_cart_response());
+  $ua->add_response('cart/set_delivery_slot', WWW::Picnic::MockUA::sample_cart_response());
+  $ua->add_response('search-page-results', WWW::Picnic::MockUA::sample_search_response());
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country, http_agent => $ua,
+  );
+
+  my @methods = (
+    [ 'get_article',       'product_id', sub { $p->get_article(@_) } ],
+    [ 'add_to_cart',      'product_id', sub { $p->add_to_cart(@_) } ],
+    [ 'remove_from_cart', 'product_id', sub { $p->remove_from_cart(@_) } ],
+    [ 'set_delivery_slot','slot_id',    sub { $p->set_delivery_slot(@_) } ],
+    [ 'search',           'term',       sub { $p->search(@_) } ],
+  );
+
+  for my $method ( @methods ) {
+    my ( $name, $argument, $code ) = @$method;
+
+    my $undef_err = do { eval { $code->(undef) }; $@ };
+    ok( $undef_err, "$name: an undefined $argument is refused" );
+    like( $undef_err, qr/^\Q$name\E: \Q$argument\E is required/,
+      "$name: the message names the method and the argument" );
+
+    my $empty_err = do { eval { $code->('') }; $@ };
+    ok( $empty_err, "$name: an empty $argument is refused" );
+    like( $empty_err, qr/^\Q$name\E: \Q$argument\E must not be empty/,
+      "$name: the message names the method and the argument" );
+  }
+};
+
 done_testing;
