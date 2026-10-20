@@ -94,7 +94,8 @@ for my $phase ( 'runtime', 'test' ) {
 
 # the prerequisites of a phase stand in alphabetical order
 for my $phase ( 'runtime', 'test' ) {
-  is_deeply( $order{$phase}, [ sort @{ $order{$phase} } ],
+  is_deeply( $order{$phase},
+    [ sort { lc $a cmp lc $b } @{ $order{$phase} } ],
     "the $phase prerequisites are listed alphabetically" );
 }
 
