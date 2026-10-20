@@ -52,8 +52,6 @@ use WWW::Picnic::Result::Suggestions;
 
 =head1 DESCRIPTION
 
-B<WORK IN PROGRESS>
-
 This module provides a Perl interface to the Picnic Supermarket API. It handles
 authentication and provides methods to search for products, manage your cart,
 and check delivery slots.

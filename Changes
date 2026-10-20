@@ -22,6 +22,8 @@
       the search term is missing or empty
     - The count of add_to_cart and remove_from_cart is checked: it must be
       a positive integer
+    - The description of the module does not carry the marker WORK IN PROGRESS
+      any more
 
 0.101     2026-09-18 03:23:15Z
     - Enable UTF-8 and convert_blessed for JSON::MaybeXS
