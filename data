@@ -1,0 +1,26 @@
+---
+claimed_at: 2026-10-20T09:42:43Z
+claimed_by: k7-k12
+class: standard
+completed: 2026-10-20T09:42:43Z
+created: 2026-10-20T08:49:20Z
+id: 8
+priority: medium
+started: 2026-10-20T09:19:40Z
+status: done
+tags:
+- http
+- errors
+title: An answer that is not JSON must be an error, not a parser crash
+updated: 2026-10-20T09:42:43Z
+---
+
+The body goes into the JSON decoder without a check.
+
+lib/WWW/Picnic.pm:361 decodes the content of the answer directly; the error path at :358-360 croaks with the URL and the status_line only. A body that is not JSON (the login page of a proxy, for example) dies with "malformed JSON string, neither tag, array, object, number, string or atom, at character offset 0", and the caller learns neither status nor method nor path. The same is true for the login at :209.
+
+Decide: a body that is not JSON, and an empty body of a 2xx without content, are raised as an error with status, method and path. WWW::PayPal::Error is the pattern to follow.
+
+The test that holds this down must be red against the old lib/ and fail as a failed expectation, not as a die.
+
+Commit: 8bd5df2 — die Antwort wird an einer Stelle dekodiert; eine leere Antwort und eine Antwort, die kein JSON ist, werfen einen WWW::Picnic::Error. verify_2fa_code toleriert eine leere Antwort. Red proof gegen das alte lib: die vier neuen Subtests schlagen fehl (erwartete Fehlschlaege, keine Exceptions).
