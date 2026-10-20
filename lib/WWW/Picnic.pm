@@ -221,7 +221,7 @@ sub login {
     $self->_throw_http_error( $response, 'POST', $url );
   }
   my $auth = $response->header('X-Picnic-Auth');
-  my $data = $self->json->decode($response->content);
+  my $data = $self->_decode_json( $response, 'POST', $url );
   $data->{auth_key} = $auth;
   delete $self->_auth_cache->{pending};
   if ($auth && $data->{second_factor_authentication_required}) {
@@ -248,7 +248,8 @@ required, the pending token from the response is kept separately and sent with
 L</generate_2fa_code> and L</verify_2fa_code>.
 
 A failed login throws a L<WWW::Picnic::Error> that names the status, the
-method and the path of the failed call.
+method and the path of the failed call. An answer that is no JSON, and an
+empty answer, are errors of the same kind.
 
 =cut
 
@@ -275,7 +276,7 @@ sub _2fa_request {
   unless ($response->is_success) {
     $self->_throw_http_error( $response, 'POST', $url );
   }
-  return $response;
+  return ( $response, $url );
 }
 
 =method generate_2fa_code
@@ -294,12 +295,10 @@ method and the path of the failed call.
 sub verify_2fa_code {
   my ( $self, $code ) = @_;
   croak __PACKAGE__.": 2FA code required" unless defined $code;
-  my $response = $self->_2fa_request( 'verify', { otp => $code } );
+  my ( $response, $url ) = $self->_2fa_request( 'verify', { otp => $code } );
   my $auth = $response->header('X-Picnic-Auth');
   croak __PACKAGE__.": 2FA verify success, but no auth token!" unless $auth;
-  my $content = $response->content;
-  my $data = ( defined $content && length $content )
-    ? $self->json->decode($content) : {};
+  my $data = $self->_decode_json( $response, 'POST', $url, allow_empty => 1 );
   $data = {} unless ref $data eq 'HASH';
   $self->_auth_cache->{auth} = $auth;
   $self->_auth_cache->{user_id} = $data->{user_id} if $data->{user_id};
@@ -315,7 +314,8 @@ Verify the 2FA code received via SMS. On success, the auth token is
 cached and you can proceed with API calls.
 
 A rejected code throws a L<WWW::Picnic::Error> that names the status, the
-method and the path of the failed call.
+method and the path of the failed call. An answer that is no JSON is an
+error of the same kind, an empty answer is tolerated.
 
 =cut
 
@@ -358,14 +358,35 @@ sub _error_path {
   return $path;
 }
 
-sub _throw_http_error {
-  my ( $self, $response, $method, $url ) = @_;
+sub _throw_error {
+  my ( $self, $response, $method, $url, $message ) = @_;
   WWW::Picnic::Error->throw(
-    message => $response->status_line,
+    message => $message,
     status  => $response->code,
     method  => $method,
     path    => $self->_error_path($url),
   );
+}
+
+sub _throw_http_error {
+  my ( $self, $response, $method, $url ) = @_;
+  $self->_throw_error( $response, $method, $url, $response->status_line );
+}
+
+# The JSON of an answer: an empty body and a body that is no JSON are errors.
+# A failure later would name the wrong cause.
+sub _decode_json {
+  my ( $self, $response, $method, $url, %opt ) = @_;
+  my $content = $response->content;
+  if ( !defined $content or !length $content ) {
+    return {} if $opt{allow_empty};
+    $self->_throw_error( $response, $method, $url, 'HTTP '.$response->code.': the answer was empty' );
+  }
+  my $data = eval { $self->json->decode($content) };
+  if ( $@ ) {
+    $self->_throw_error( $response, $method, $url, 'HTTP '.$response->code.': the answer was no JSON' );
+  }
+  return $data;
 }
 
 sub request {
@@ -395,7 +416,7 @@ sub request {
   unless ($response->is_success) {
     $self->_throw_http_error( $response, $method, $url );
   }
-  return $self->json->decode($response->content);
+  return $self->_decode_json( $response, $method, $url );
 }
 
 =method request
@@ -423,6 +444,10 @@ authentication is discarded, L</picnic_auth> logs in again (croaking as usual
 if 2FA is required) and the call is repeated exactly once. A second C<401>, or
 any other non-2xx status, throws a L<WWW::Picnic::Error> that names the
 status, the method and the path of the failed call.
+
+The answer must be JSON: an empty body and a body that is no JSON throw a
+L<WWW::Picnic::Error> that names the status, the method and the path of the
+failed call.
 
 This is a low-level method used internally by other methods. You typically won't
 need to call it directly unless accessing undocumented API endpoints.

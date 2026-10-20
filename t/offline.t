@@ -339,4 +339,89 @@ subtest 'the error names the query of the failed call' => sub {
   }
 };
 
+subtest 'an answer that is no JSON is an error' => sub {
+  my $ua = WWW::Picnic::MockUA->new;
+  $ua->add_response('user/login', WWW::Picnic::MockUA::sample_login_response(),
+    headers => { 'X-Picnic-Auth' => 'mock-auth-token-12345' });
+  $ua->add_response('cart$', undef, raw => 'this is no JSON');
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country, http_agent => $ua,
+  );
+
+  my $err = do { eval { $p->get_cart }; $@ };
+  ok( blessed($err), 'the failed call throws an object' );
+  is( ref $err, 'WWW::Picnic::Error', 'the object is a WWW::Picnic::Error' );
+  my $attributes = error_attributes($err);
+  SKIP: {
+    skip 'no WWW::Picnic::Error to look at', 4 unless $attributes;
+    is( $attributes->{message}, 'HTTP 200: the answer was no JSON', 'message' );
+    is( $attributes->{status}, 200, 'status' );
+    is( $attributes->{method}, 'GET', 'method' );
+    is( $attributes->{path}, '/api/15/cart', 'path' );
+  }
+};
+
+subtest 'an empty answer is an error' => sub {
+  my $ua = WWW::Picnic::MockUA->new;
+  $ua->add_response('user/login', WWW::Picnic::MockUA::sample_login_response(),
+    headers => { 'X-Picnic-Auth' => 'mock-auth-token-12345' });
+  $ua->add_response('cart$', undef, raw => '');
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country, http_agent => $ua,
+  );
+
+  my $err = do { eval { $p->get_cart }; $@ };
+  my $attributes = error_attributes($err);
+  ok( $attributes, 'the failed call throws a WWW::Picnic::Error' );
+  SKIP: {
+    skip 'no WWW::Picnic::Error to look at', 3 unless $attributes;
+    is( $attributes->{message}, 'HTTP 200: the answer was empty', 'message' );
+    is( $attributes->{status}, 200, 'status' );
+    is( $attributes->{path}, '/api/15/cart', 'path' );
+  }
+};
+
+subtest 'an empty answer at the login is an error' => sub {
+  my $ua = WWW::Picnic::MockUA->new;
+  $ua->add_response('user/login', undef, raw => '');
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country, http_agent => $ua,
+  );
+
+  my $err = do { eval { $p->login }; $@ };
+  my $attributes = error_attributes($err);
+  ok( $attributes, 'the failed call throws a WWW::Picnic::Error' );
+  SKIP: {
+    skip 'no WWW::Picnic::Error to look at', 3 unless $attributes;
+    is( $attributes->{message}, 'HTTP 200: the answer was empty', 'message' );
+    is( $attributes->{method}, 'POST', 'method' );
+    is( $attributes->{path}, '/api/15/user/login', 'path' );
+  }
+};
+
+subtest 'the 2FA verify checks the body' => sub {
+  my $ua = WWW::Picnic::MockUA->new;
+  $ua->add_response('user/login', WWW::Picnic::MockUA::sample_login_2fa_response(),
+    headers => { 'X-Picnic-Auth' => 'pending-token' });
+  $ua->add_response('user/2fa/generate', {});
+  $ua->add_response('user/2fa/verify', undef, raw => 'this is no JSON',
+    headers => { 'X-Picnic-Auth' => 'final-token' });
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country, http_agent => $ua,
+  );
+
+  $p->login;
+  $p->generate_2fa_code;
+  my $err = do { eval { $p->verify_2fa_code('123456') }; $@ };
+  my $attributes = error_attributes($err);
+  ok( $attributes, 'the failed call throws a WWW::Picnic::Error' );
+  SKIP: {
+    skip 'no WWW::Picnic::Error to look at', 4 unless $attributes;
+    is( $attributes->{message}, 'HTTP 200: the answer was no JSON', 'message' );
+    is( $attributes->{status}, 200, 'status' );
+    is( $attributes->{method}, 'POST', 'method' );
+    is( $attributes->{path}, '/api/15/user/2fa/verify', 'path' );
+  }
+};
+
 done_testing;
