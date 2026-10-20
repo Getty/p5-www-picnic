@@ -424,4 +424,56 @@ subtest 'the 2FA verify checks the body' => sub {
   }
 };
 
+subtest 'the product id is sent as one path segment' => sub {
+  my $ua = WWW::Picnic::MockUA->new;
+  $ua->add_response('user/login', WWW::Picnic::MockUA::sample_login_response(),
+    headers => { 'X-Picnic-Auth' => 'mock-auth-token-12345' });
+  $ua->add_response('articles/', WWW::Picnic::MockUA::sample_article_response());
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country, http_agent => $ua,
+  );
+
+  my $article = $p->get_article('a b/c');
+  isa_ok( $article, 'WWW::Picnic::Result::Article' );
+  my @requests = $ua->all_requests;
+  is( $requests[-1]->uri->path, '/api/15/articles/a%20b%2Fc',
+    'the id is one escaped segment' );
+};
+
+subtest 'a product id with a slash stays in the segment' => sub {
+  my $ua = WWW::Picnic::MockUA->new;
+  $ua->add_response('user/login', WWW::Picnic::MockUA::sample_login_response(),
+    headers => { 'X-Picnic-Auth' => 'mock-auth-token-12345' });
+  $ua->add_response('articles/', WWW::Picnic::MockUA::sample_article_response());
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country, http_agent => $ua,
+  );
+
+  my $err = do { eval { $p->get_article('../cart') }; $@ };
+  is( $err, '', 'the call does not croak' );
+  my @requests = $ua->all_requests;
+  is( $requests[-1]->uri->path, '/api/15/articles/..%2Fcart',
+    'the id stays in the segment' );
+};
+
+subtest 'a product id that is a dot segment is refused' => sub {
+  my $ua = WWW::Picnic::MockUA->new;
+  $ua->add_response('user/login', WWW::Picnic::MockUA::sample_login_response(),
+    headers => { 'X-Picnic-Auth' => 'mock-auth-token-12345' });
+  $ua->add_response('articles/', WWW::Picnic::MockUA::sample_article_response());
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country, http_agent => $ua,
+  );
+
+  for my $id ( '', '.', '..' ) {
+    my $err = do { eval { $p->get_article($id) }; $@ };
+    ok( $err, "$id is refused" );
+  }
+
+  for my $id ( '.', '..' ) {
+    my $err = do { eval { $p->get_article($id) }; $@ };
+    like( $err, qr/cannot be empty, '\.' or '\.\.'/, "$id: the message names the reason" );
+  }
+};
+
 done_testing;

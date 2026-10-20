@@ -8,6 +8,7 @@ use JSON::MaybeXS;
 use HTTP::Request;
 use LWP::UserAgent;
 use Digest::MD5 qw( md5_hex );
+use URI::Escape;
 
 use WWW::Picnic::Error;
 
@@ -531,9 +532,21 @@ object containing the results.
 
 =cut
 
+# The one place a caller-supplied value becomes part of a request path: the
+# value must stay one segment whatever it holds.
+sub _path_segment {
+  my ( $self, $name, $value ) = @_;
+  # No encoding helps for these: '' removes the segment, and '.' / '..' are
+  # dot segments to every URL normaliser even when written as %2E.
+  croak __PACKAGE__.": path parameter '$name' cannot be empty, '.' or '..'"
+    if !defined $value or $value eq '' or $value eq '.' or $value eq '..';
+  return uri_escape_utf8($value);
+}
+
 sub get_article {
   my ( $self, $product_id ) = @_;
-  return WWW::Picnic::Result::Article->new( $self->request( GET => "articles/$product_id" ) );
+  my $segment = $self->_path_segment( 'product_id', $product_id );
+  return WWW::Picnic::Result::Article->new( $self->request( GET => 'articles/'.$segment ) );
 }
 
 =method get_article
@@ -544,6 +557,9 @@ sub get_article {
 
 Get detailed information about a specific product. Returns a
 L<WWW::Picnic::Result::Article> object.
+
+The product id is sent as one path segment: it is escaped, and the values
+C<''>, C<.> and C<..> are refused.
 
 =cut
 
