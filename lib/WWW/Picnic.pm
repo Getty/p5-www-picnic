@@ -8,7 +8,7 @@ use JSON::MaybeXS;
 use HTTP::Request;
 use LWP::UserAgent;
 use Digest::MD5 qw( md5_hex );
-use URI::Escape;
+use URI::Escape qw(uri_escape_utf8);
 
 use WWW::Picnic::Error;
 
