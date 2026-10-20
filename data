@@ -1,0 +1,24 @@
+---
+claimed_at: 2026-10-20T09:42:47Z
+claimed_by: k7-k12
+class: standard
+completed: 2026-10-20T09:42:47Z
+created: 2026-10-20T08:49:25Z
+id: 9
+priority: medium
+started: 2026-10-20T09:19:46Z
+status: done
+tags:
+- http
+- timeout
+title: The user agent needs a timeout
+updated: 2026-10-20T09:42:47Z
+---
+
+lib/WWW/Picnic.pm:130 builds the LWP::UserAgent without a timeout. The default of LWP is 180 seconds.
+
+A blackholed address or a hanging TLS handshake blocks every request for three minutes; bin/picnic stands there without any output, and the user cannot break it. p5-www-paypal/lib/WWW/PayPal/Role/HTTP.pm:58 and p5-www-keycloak:127 set timeout => 30.
+
+Decide: the user agent gets timeout => 30 and ssl_opts => { verify_hostname => 1 }.
+
+Commit: 42c1423 — timeout 30, ssl_opts verify_hostname 1. Red proof gegen das alte lib: die Timeout-Assertion schlaegt fehl (180 statt 30); die verify_hostname-Assertion ist in beiden gruen, weil LWP::UserAgent den Hostnamen ohnehin prueft.
