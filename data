@@ -1,0 +1,30 @@
+---
+claimed_at: 2026-10-20T09:43:11Z
+claimed_by: k7-k12
+class: standard
+completed: 2026-10-20T09:42:38Z
+created: 2026-10-20T08:49:15Z
+id: 7
+priority: high
+started: 2026-10-20T09:19:34Z
+status: done
+tags:
+- http
+- security
+title: A redirect must not carry the session token to another host
+updated: 2026-10-20T09:43:11Z
+---
+
+The user agent follows redirects and sends the session token along.
+
+lib/WWW/Picnic.pm:130 builds the LWP::UserAgent without max_redirect => 0. The default of LWP is 7 redirects, and requests_redirectable covers GET and HEAD.
+
+So a GET that answers 302 (get_cart, get_user, search, get_article) is followed, and the header X-Picnic-Auth (lib/WWW/Picnic.pm:346) goes to the redirect target. On the LWP of CPAN the header is not removed, so the foreign target holds the token of the logged in account, and its answer counts as the success of the call.
+
+Decide: the user agent gets max_redirect => 0, and every 3xx is raised as an error with status, method and path.
+
+Commit 570458e: Do not follow redirects, fail with a WWW::Picnic::Error (k7). Red proof: t/offline.t fails against the old lib (bbf2733) with 3 failed expectations (max_redirect 7 != 0, the error is no WWW::Picnic::Error, the message names no status, method and path), no die. Suite green: 4 files, 36 tests.
+
+Also found (nicht in dieser Kartenfolge geaendert): 1) B<WORK IN PROGRESS> steht weiter in der DESCRIPTION von lib/WWW/Picnic.pm (k11 laesst ihn bewusst stehen). 2) Das optionale Argument count von add_to_cart und remove_from_cart wird nicht geprueft (waere eine neue Verhaltensregel). 3) Der Pfad-Segment-Helfer aus k10 gilt nur fuer get_article: add_to_cart und remove_from_cart schicken die Produkt-ID im JSON-Body, set_delivery_slot die slot_id, search den Begriff in der Query. 4) Die verify_hostname-Assertion aus k9 ist auch gegen das alte lib gruen, weil LWP::UserAgent den Hostnamen ohnehin prueft - rot war nur der Timeout. 5) Die Argumentpruefung aus k12 kommt vor dem Pfad-Segment-Helfer und ueberlagert dessen Pruefung auf leere Werte.
+
+Koordinator: zwei kleine Nachzuegler auf main, ecbca62 - das cpanfile fuehrt namespace::clean jetzt im Versionsstil der Datei (requires 'namespace::clean', '0';), und lib/WWW/Picnic.pm importiert uri_escape_utf8 namentlich (use URI::Escape qw(uri_escape_utf8);), damit der Import auch bei einer aelteren URI-Version vorhanden ist. Suite danach gruen (4 Dateien, 45 Tests).
