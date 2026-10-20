@@ -1,0 +1,64 @@
+---
+class: standard
+completed: 2026-10-20T17:10:26Z
+created: 2026-10-20T17:04:55Z
+id: 17
+priority: low
+started: 2026-10-20T17:10:26Z
+status: done
+tags:
+- release
+- prereq
+title: Die cpanfile sortiert case-insensitiv wie die uebrige Flotte
+updated: 2026-10-20T17:10:26Z
+---
+
+Das cpanfile dieser Distribution steht in der Reihenfolge, die der Sortierbefehl
+von Perl liefert: die Grossbuchstaben kommen zuerst, `namespace::clean` steht
+ganz am Ende.
+
+In den uebrigen Distributionen der WWW-Flotte, in denen die Reihenfolge von
+einem Test festgehalten wird, gilt die Reihenfolge ohne Ruecksicht auf die
+Gross- und Kleinschreibung: dort steht `namespace::clean` zwischen `Moo` und
+`URI`. Diese Distribution ist die einzige, die es anders macht.
+
+Zwei Aenderungen, mehr nicht:
+
+1. im cpanfile rueckt `requires 'namespace::clean';` vor `requires 'URI';`:
+
+       requires 'Moo';
+       requires 'namespace::clean';
+       requires 'URI';
+
+2. t/cpanfile.t sortiert case-insensitiv. Statt
+
+       is_deeply( $order{$phase}, [ sort @{ $order{$phase} } ],
+
+   wird
+
+       is_deeply( $order{$phase},
+                  [ sort { lc $a cmp lc $b } @{ $order{$phase} } ],
+
+   Die Reihenfolge-Pruefung selbst bleibt sonst unveraendert, die beiden
+   uebrigen Pruefungen (leere Pins, Laufzeit- gegen Test-Phase) auch.
+
+Der rote Beweis: der Test muss gegen das alte cpanfile rot sein - die
+Reihenfolge stimmt dann nicht mehr - und mit dem neuen gruen sein. Belege ihn
+so und nenne das Ergebnis in der Abschlussmeldung:
+
+    cd <worktree>
+    cp cpanfile cpanfile.bak
+    git show main:cpanfile > cpanfile
+    prove -lr t/cpanfile.t     # muss rot sein
+    mv cpanfile.bak cpanfile
+    prove -lr t/cpanfile.t     # muss gruen sein
+
+cpanfile.bak ist nur eine Sicherung: sie wird nicht committet und am Ende
+geloescht.
+
+Aenderungen ausserhalb von cpanfile und t/cpanfile.t: nicht. Kein neuer
+Changes-Eintrag: die Datei aendert ihre Form nicht, nur die Reihenfolge ihrer
+Zeilen - der Eintrag aus k15 gilt unveraendert. Commit-Betreff nennt die Karte
+als (kNN), kein #NN.
+
+Koordination: der Commit b57cb10 steht auf main (ff-only gemergt). Der rote Beweis wurde nachgeprueft: gegen das alte cpanfile aus main ist 1 von 20 Tests rot (die Reihenfolge der Laufzeit-Phase), mit dem neuen cpanfile sind alle 20 gruen. Damit sortiert die Distribution case-insensitiv wie bund, dnsmadeeasy, gitea, mailboxorg und zitadel: namespace::clean steht zwischen Moo und URI. Suite offline: 4 Dateien, 64 Tests, PASS.
