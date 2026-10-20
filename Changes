@@ -1,3 +1,5 @@
+Revision history for WWW-Picnic
+
 {{$NEXT}}
     - Fix 2FA flow: keep the pending token from login and send it together
       with X-Picnic-Agent and X-Picnic-Did on generate_2fa_code and
