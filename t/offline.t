@@ -4,6 +4,7 @@ use warnings;
 use utf8;
 use Test::More;
 use lib 't/lib';
+use Scalar::Util qw( blessed );
 
 BEGIN {
   use_ok('WWW::Picnic');
@@ -261,6 +262,72 @@ subtest 'second 401 croaks without looping' => sub {
   eval { $p->get_user };
   like($@, qr/401/, 'croaks on repeated 401');
   is(scalar(grep { $_->uri->path =~ m{/user$} } $ua->all_requests), 2, 'exactly one retry');
+};
+
+# The attributes of a thrown error, or undef when the call threw no
+# WWW::Picnic::Error. Keeps a failing expectation from dying.
+sub error_attributes {
+  my ( $err ) = @_;
+  return undef unless blessed($err) && $err->isa('WWW::Picnic::Error');
+  return {
+    status  => $err->status,
+    method  => $err->method,
+    path    => $err->path,
+    message => $err->message,
+  };
+}
+
+subtest 'the user agent does not follow a redirect' => sub {
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country,
+  );
+  is( $p->http_agent->max_redirect, 0, 'no redirect is followed' );
+};
+
+subtest 'a redirect is an error that names status, method and path' => sub {
+  my $ua = WWW::Picnic::MockUA->new;
+  $ua->add_response('user/login', WWW::Picnic::MockUA::sample_login_response(),
+    headers => { 'X-Picnic-Auth' => 'mock-auth-token-12345' });
+  $ua->add_response('cart$', undef, status => 302, raw => 'moved');
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country, http_agent => $ua,
+  );
+
+  my $err = do { eval { $p->get_cart }; $@ };
+  ok( blessed($err), 'the failed call throws an object' );
+  is( ref $err, 'WWW::Picnic::Error', 'the object is a WWW::Picnic::Error' );
+  like( "$err", qr{^WWW::Picnic error \(GET /api/15/cart\): 302 Found$},
+    'the message names the status, the method and the path' );
+  unlike( "$err", qr/mock-auth-token-12345/, 'the message carries no session token' );
+
+  my $attributes = error_attributes($err);
+  SKIP: {
+    skip 'no WWW::Picnic::Error to look at', 4 unless $attributes;
+    is( $attributes->{status}, 302, 'status' );
+    is( $attributes->{method}, 'GET', 'method' );
+    is( $attributes->{path}, '/api/15/cart', 'path' );
+    is( $attributes->{message}, '302 Found', 'message' );
+  }
+};
+
+subtest 'the error names the query of the failed call' => sub {
+  my $ua = WWW::Picnic::MockUA->new;
+  $ua->add_response('user/login', WWW::Picnic::MockUA::sample_login_response(),
+    headers => { 'X-Picnic-Auth' => 'mock-auth-token-12345' });
+  $ua->add_response('search-page-results', undef, status => 500, raw => 'boom');
+  my $p = WWW::Picnic->new(
+    user => $fake_user, pass => $fake_pass, country => $fake_country, http_agent => $ua,
+  );
+
+  my $err = do { eval { $p->search('haribo') }; $@ };
+  my $attributes = error_attributes($err);
+  ok( $attributes, 'the failed call throws a WWW::Picnic::Error' );
+  SKIP: {
+    skip 'no WWW::Picnic::Error to look at', 2 unless $attributes;
+    is( $attributes->{path}, '/api/15/pages/search-page-results?search_term=haribo',
+      'path with the query' );
+    is( $attributes->{method}, 'GET', 'method' );
+  }
 };
 
 done_testing;

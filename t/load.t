@@ -5,6 +5,7 @@ use Test::More;
 
 for (qw(
   WWW::Picnic
+  WWW::Picnic::Error
   WWW::Picnic::Result::Categories
   WWW::Picnic::Result::Suggestions
 )) {

@@ -7,6 +7,8 @@
     - request retries once after a 401: the cached token is dropped and the
       client logs in again, so long-running processes survive an expired
       session; remove the unused _auth_cache time bookkeeping
+    - A redirect is not followed, a failed request throws a
+      WWW::Picnic::Error that names the status, the method and the path
 
 0.101     2026-09-18 03:23:15Z
     - Enable UTF-8 and convert_blessed for JSON::MaybeXS

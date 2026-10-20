@@ -9,6 +9,8 @@ use HTTP::Request;
 use LWP::UserAgent;
 use Digest::MD5 qw( md5_hex );
 
+use WWW::Picnic::Error;
+
 use WWW::Picnic::Result::Login;
 use WWW::Picnic::Result::User;
 use WWW::Picnic::Result::Cart;
@@ -127,7 +129,9 @@ has http_agent => (
   lazy => 1,
   default => sub {
     my $self = shift;
-    my $ua = LWP::UserAgent->new;
+    # No redirect is followed: a 3xx is an error, and the session token in
+    # X-Picnic-Auth must not reach a foreign target.
+    my $ua = LWP::UserAgent->new( max_redirect => 0 );
     $ua->agent($self->http_agent_name);
     return $ua;
   },
@@ -137,6 +141,8 @@ has http_agent => (
 
 L<LWP::UserAgent> instance used for making HTTP requests to the Picnic API.
 Automatically created with the User-Agent string from L</http_agent_name>.
+It does not follow redirects: a 3xx answer is an error, so the session
+token never reaches a foreign target.
 
 =cut
 
@@ -204,21 +210,20 @@ sub login {
     client_id => $self->client_id,
   }));
   my $response = $self->http_agent->request($request);
-  if ($response->is_success) {
-    my $auth = $response->header('X-Picnic-Auth');
-    my $data = $self->json->decode($response->content);
-    $data->{auth_key} = $auth;
-    delete $self->_auth_cache->{pending};
-    if ($auth && $data->{second_factor_authentication_required}) {
-      $self->_auth_cache->{pending} = $auth;
-    } elsif ($auth && $data->{user_id}) {
-      $self->_auth_cache->{auth} = $auth;
-      $self->_auth_cache->{user_id} = $data->{user_id};
-    }
-    return WWW::Picnic::Result::Login->new($data);
-  } else {
-    croak __PACKAGE__.": login failed! ".$response->status_line;
+  unless ($response->is_success) {
+    $self->_throw_http_error( $response, 'POST', $url );
   }
+  my $auth = $response->header('X-Picnic-Auth');
+  my $data = $self->json->decode($response->content);
+  $data->{auth_key} = $auth;
+  delete $self->_auth_cache->{pending};
+  if ($auth && $data->{second_factor_authentication_required}) {
+    $self->_auth_cache->{pending} = $auth;
+  } elsif ($auth && $data->{user_id}) {
+    $self->_auth_cache->{auth} = $auth;
+    $self->_auth_cache->{user_id} = $data->{user_id};
+  }
+  return WWW::Picnic::Result::Login->new($data);
 }
 
 =method login
@@ -235,15 +240,15 @@ If 2FA is not required, the auth token is cached automatically. If 2FA is
 required, the pending token from the response is kept separately and sent with
 L</generate_2fa_code> and L</verify_2fa_code>.
 
+A failed login throws a L<WWW::Picnic::Error> that names the status, the
+method and the path of the failed call.
+
 =cut
 
 sub generate_2fa_code {
   my ( $self, $channel ) = @_;
   $channel //= 'SMS';
-  my $response = $self->_2fa_request( 'generate', { channel => $channel } );
-  unless ($response->is_success) {
-    croak __PACKAGE__.": 2FA code generation failed! ".$response->status_line;
-  }
+  $self->_2fa_request( 'generate', { channel => $channel } );
   return 1;
 }
 
@@ -259,7 +264,11 @@ sub _2fa_request {
   $request->header('X-Picnic-Agent' => $self->picnic_agent );
   $request->header('X-Picnic-Did' => $self->picnic_did );
   $request->content($self->json->encode($data));
-  return $self->http_agent->request($request);
+  my $response = $self->http_agent->request($request);
+  unless ($response->is_success) {
+    $self->_throw_http_error( $response, 'POST', $url );
+  }
+  return $response;
 }
 
 =method generate_2fa_code
@@ -270,26 +279,25 @@ sub _2fa_request {
 Request a 2FA code to be sent via SMS (default) or another channel.
 Call this after L</login> returns a result requiring 2FA.
 
+A rejected request throws a L<WWW::Picnic::Error> that names the status, the
+method and the path of the failed call.
+
 =cut
 
 sub verify_2fa_code {
   my ( $self, $code ) = @_;
   croak __PACKAGE__.": 2FA code required" unless defined $code;
   my $response = $self->_2fa_request( 'verify', { otp => $code } );
-  if ($response->is_success) {
-    my $auth = $response->header('X-Picnic-Auth');
-    croak __PACKAGE__.": 2FA verify success, but no auth token!" unless $auth;
-    my $content = $response->content;
-    my $data = ( defined $content && length $content )
-      ? $self->json->decode($content) : {};
-    $data = {} unless ref $data eq 'HASH';
-    $self->_auth_cache->{auth} = $auth;
-    $self->_auth_cache->{user_id} = $data->{user_id} if $data->{user_id};
-    delete $self->_auth_cache->{pending};
-    return 1;
-  } else {
-    croak __PACKAGE__.": 2FA verification failed! ".$response->status_line;
-  }
+  my $auth = $response->header('X-Picnic-Auth');
+  croak __PACKAGE__.": 2FA verify success, but no auth token!" unless $auth;
+  my $content = $response->content;
+  my $data = ( defined $content && length $content )
+    ? $self->json->decode($content) : {};
+  $data = {} unless ref $data eq 'HASH';
+  $self->_auth_cache->{auth} = $auth;
+  $self->_auth_cache->{user_id} = $data->{user_id} if $data->{user_id};
+  delete $self->_auth_cache->{pending};
+  return 1;
 }
 
 =method verify_2fa_code
@@ -298,6 +306,9 @@ sub verify_2fa_code {
 
 Verify the 2FA code received via SMS. On success, the auth token is
 cached and you can proceed with API calls.
+
+A rejected code throws a L<WWW::Picnic::Error> that names the status, the
+method and the path of the failed call.
 
 =cut
 
@@ -331,6 +342,25 @@ need to call it directly.
 
 =cut
 
+# The path of a failed call: without host and scheme, with the query when the
+# call had one. The session token never appears here.
+sub _error_path {
+  my ( $self, $url ) = @_;
+  my $path = $url->path;
+  $path .= '?'.$url->query if $url->query;
+  return $path;
+}
+
+sub _throw_http_error {
+  my ( $self, $response, $method, $url ) = @_;
+  WWW::Picnic::Error->throw(
+    message => $response->status_line,
+    status  => $response->code,
+    method  => $method,
+    path    => $self->_error_path($url),
+  );
+}
+
 sub request {
   my ( $self, @original_args ) = @_;
   my ( $method, $path, $data, %params ) = @original_args;
@@ -356,7 +386,7 @@ sub request {
     delete @{$self->_auth_cache}{qw( auth user_id pending )};
   }
   unless ($response->is_success) {
-    croak __PACKAGE__.": request to ".$url->as_string." failed! ".$response->status_line;
+    $self->_throw_http_error( $response, $method, $url );
   }
   return $self->json->decode($response->content);
 }
@@ -384,7 +414,8 @@ Parameters:
 If the API answers with C<401> (expired or revoked token), the cached
 authentication is discarded, L</picnic_auth> logs in again (croaking as usual
 if 2FA is required) and the call is repeated exactly once. A second C<401>, or
-any other non-2xx status, croaks.
+any other non-2xx status, throws a L<WWW::Picnic::Error> that names the
+status, the method and the path of the failed call.
 
 This is a low-level method used internally by other methods. You typically won't
 need to call it directly unless accessing undocumented API endpoints.
