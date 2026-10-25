@@ -18,6 +18,9 @@
       "getty-perl-pod@karr",
       "getty-perl-release-author-getty@karr",
       "perl-release-dist-ini@getty"
+    ],
+    "bundles": [
+      "getty-cpan-dist@getty"
     ]
   },
   "targets": [

@@ -7,7 +7,8 @@ CLIs in `bin/picnic*`, tests in `t/`.
 ## Delegation
 
 Delegate behavior-relevant code to the right agent instead of touching it yourself —
-principle and lane are in `.claude/rules/www-picnic-rules.md`.
+the delegation lock and the publish gate are shared house rules (skilletor bundle
+`getty-cpan-dist@getty`); lanes and hazards are in `.claude/rules/www-picnic-rules.md`.
 
 | Task | Agent |
 |---|---|
