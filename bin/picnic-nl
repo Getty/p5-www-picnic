@@ -2,6 +2,8 @@
 # PODNAME: picnic-nl
 # ABSTRACT: Dutch Picnic CLI (wrapper for picnic with PICNIC_LANG=nl and PICNIC_COUNTRY=nl)
 
+our $VERSION = '0.102';
+
 use strict;
 use warnings;
 use FindBin;

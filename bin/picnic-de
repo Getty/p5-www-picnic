@@ -2,6 +2,8 @@
 # PODNAME: picnic-de
 # ABSTRACT: German Picnic CLI (wrapper for picnic with PICNIC_LANG=de and PICNIC_COUNTRY=de)
 
+our $VERSION = '0.102';
+
 use strict;
 use warnings;
 use FindBin;

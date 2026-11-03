@@ -2,6 +2,8 @@
 # PODNAME: picnic
 # ABSTRACT: Command-line interface for Picnic Supermarket API
 
+our $VERSION = '0.102';
+
 use strict;
 use warnings;
 use utf8;
