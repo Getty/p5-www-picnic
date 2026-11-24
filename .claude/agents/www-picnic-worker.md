@@ -2,12 +2,11 @@
 name: www-picnic-worker
 description: "Default WWW::Picnic worker — implement, refactor, debug, and test the Picnic Supermarket API Perl client (lib/WWW/Picnic/*.pm + bin/picnic*). Pre-loaded with WWW::Picnic architecture, Moo patterns, [@Author::GETTY] release rules, and Getty house style. Use for any behavior-relevant change in this repo. Leaves a commit-ready tree; never commits — commits belong to www-picnic-release-manager."
 model: inherit
-briefing:
-  skills:
-    - www-picnic-core
-    - getty-perl-core
-    - getty-perl-moo
-    - getty-perl-pod
+skills:
+  - www-picnic-core
+  - getty-perl-core
+  - getty-perl-moo
+  - getty-perl-pod
 ---
 
 You are the www-picnic-worker for **WWW::Picnic**, the Perl client for the Picnic Supermarket API (login + 2FA, search, cart, delivery slots, articles).

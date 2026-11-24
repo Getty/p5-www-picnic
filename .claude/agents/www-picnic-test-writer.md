@@ -2,10 +2,9 @@
 name: www-picnic-test-writer
 description: "Write tests for WWW::Picnic — MockUA-driven, no network. Cover new endpoints, result-class accessors, auth headers, and the 2FA flow. Never run t/basic.t (live API test, requires real credentials) — only t/offline.t and t/load.t."
 model: sonnet
-briefing:
-  skills:
-    - www-picnic-core
-    - getty-perl-core
+skills:
+  - www-picnic-core
+  - getty-perl-core
 ---
 
 You are the www-picnic-test-writer.
